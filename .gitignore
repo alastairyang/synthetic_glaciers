@@ -1,0 +1,5 @@
+*.mat
+*.fig
+.DS_Store
+*.lock
+*.png

@@ -1,0 +1,43 @@
+%Parameterization for ISMIP A experiment
+
+%Geometry
+disp('   Constructing Geometry');
+
+%Define the geometry of the simulation #md.geometry
+% S: surface elevation
+% B: base elevation
+% H: ice thickness
+% X, Y: Nx1 coordinates
+% X_g, Y_g: meshgrid
+disp('   Loading geometry data');
+[x, y, X_g, Y_g, s, b, H] = testbed_data();
+md.geometry.surface = InterpFromGridToMesh(x, y, s, md.mesh.x, md.mesh.y, 0);
+md.geometry.thickness = InterpFromGridToMesh(x, y, H, md.mesh.x, md.mesh.y, 0)
+md.geometry.base = md.geometry.surface - md.geometry.thickness;
+
+
+disp('   Defining friction parameters');
+
+%These parameters will not be used but need to be fixed #md.friction
+%one friciton coefficient per node (md.mesh.numberofvertices,1)
+md.friction.coefficient=200.0*ones(md.mesh.numberofvertices,1);
+
+%one friciton exponent (p,q) per element
+md.friction.p=ones(md.mesh.numberofelements,1);
+md.friction.q=ones(md.mesh.numberofelements,1);
+
+disp('   Construct ice rheological properties');
+
+%The rheology parameters sit in the material section #md.materials
+%B has one value per vertex
+md.materials.rheology_B=6.8067e7*ones(md.mesh.numberofvertices,1);
+%n has one value per element
+%->
+md.materials.rheology_n=3*ones(md.mesh.numberofelements,1);
+
+disp('   Set boundary conditions');
+
+%Set the default boundary conditions for an ice-sheet 
+% #help SetIceSheetBC
+md=SetIceSheetBC(md);
+

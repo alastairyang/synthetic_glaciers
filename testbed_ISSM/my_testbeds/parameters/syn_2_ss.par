@@ -1,0 +1,66 @@
+%Parameterization for ISMIP A experiment
+
+%Geometry
+disp('   Constructing Geometry');
+
+%Define the geometry of the simulation #md.geometry
+% S: surface elevation
+% B: base elevation
+% H: ice thickness
+% X, Y: Nx1 coordinates
+% X_g, Y_g: meshgrid
+disp('   Loading geometry data');
+[geometry, ~] = query_data(2,'ss');
+geometry_path = geometry{1};
+[x, y, ~, ~, s, b, H, ~, ~, ~, ~, ~, fric_coef, shelf_melt, SMB] = testbed_data(geometry_path);
+md.geometry.surface = InterpFromGridToMesh(x', y, s, md.mesh.x, md.mesh.y, 0);
+md.geometry.base = InterpFromGridToMesh(x', y, b, md.mesh.x, md.mesh.y, 0)
+md.geometry.thickness = md.geometry.surface - md.geometry.base;
+
+%Get the node numbers of floating nodes
+pos=find(md.mask.ocean_levelset<0); 
+
+disp('   Constructing thickness related variables');
+pos0=find(md.geometry.thickness<=1);
+md.geometry.thickness(pos0)=1;
+md.geometry.surface=md.geometry.thickness+md.geometry.base;
+md.geometry.bed = md.geometry.base;
+
+disp('   Defining friction parameters');
+fric_coef_mesh = InterpFromGridToMesh(x', y, fric_coef,...
+                                      md.mesh.x, md.mesh.y, 0);
+md.friction.coefficient=fric_coef_mesh;
+%one friciton exponent (p,q) per element
+md.friction.p=ones(md.mesh.numberofelements,1);
+md.friction.q=ones(md.mesh.numberofelements,1);
+
+%no friction applied on floating ice
+pos=find(md.mask.ocean_levelset<0);
+md.friction.coefficient(pos)=0;
+md.groundingline.migration='SubelementMigration';
+
+disp('   Construct ice rheological properties');
+
+%The rheology parameters sit in the material section #md.materials
+%B has one value per vertex
+md.materials.rheology_B=6.8067e7*ones(md.mesh.numberofvertices,1);
+%n has one value per element
+%->
+md.materials.rheology_n=3*ones(md.mesh.numberofelements,1);
+
+disp('   Set boundary conditions');
+md=SetMarineIceSheetBC(md);
+% Set Dirichlet B.C of thickness at inflow boundary
+% first get vertex on ice front (borrowed from SetMarineIceSheet)
+% then subtract
+pos = find(sum(md.mask.ocean_levelset(md.mesh.elements)<0.,2) >0.);
+vertexonfloatingice = zeros(md.mesh.numberofvertices,1);
+vertexonfloatingice(md.mesh.elements(pos,:)) = 1.;
+vertexonicefront = double(md.mesh.vertexonboundary & vertexonfloatingice);
+vertexnoticefront = md.mesh.vertexonboundary - vertexonicefront;
+noticefront_i  = find(vertexnoticefront == 1);
+md.masstransport.spcthickness(noticefront_i) = md.geometry.thickness(noticefront_i);
+% also fix the thickness at the calving front
+% well, basically fixing all boundary thickness
+boundary_nodes = find(md.mesh.vertexonboundary);
+md.masstransport.spcthickness(boundary_nodes) = md.geometry.thickness(boundary_nodes);
