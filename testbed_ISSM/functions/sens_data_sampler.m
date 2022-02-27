@@ -3,11 +3,11 @@ function [] = sens_data_sampler(model_index, test_index, sens_data)
 % for simulations
 %
 % Input:
-%       model_index[int]: model index number 
+%       model_index[str]: model index
 %       test_index[int] : test run index
 %       sens_data[struc]: structure containing the data
 
-    modelname = ['sens_', num2str(model_index)];
+    modelname = ['sens_', model_index];
     data = sens_data.(modelname);
     N_test = data.N_test;
     N_vars  = data.N_vars;

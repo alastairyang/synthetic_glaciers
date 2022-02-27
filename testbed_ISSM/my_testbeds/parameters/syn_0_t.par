@@ -1,5 +1,5 @@
 %% Parameter
-model_index = 0;
+model_index = '0';
 
 %% MAIN
 %Geometry

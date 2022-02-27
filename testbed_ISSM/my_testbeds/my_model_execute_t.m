@@ -62,7 +62,7 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
                      'data',md.mask.ice_levelset,'title','ice/no-ice')
 
     %Parameterization #3
-        ParamFile = ['parameters/syn_',num2str(model_index),'_',model_type, '.par'];
+        ParamFile = ['parameters/syn_',model_index,'_',model_type, '.par'];
         md = parameterize(md, ParamFile);
 
         %Extrusion #?
@@ -155,35 +155,35 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
         
         % This .par substitutes much of the final state of the spin-up run
         % to the initial conditions of this transient run
-        ParamFile = ['parameters/syn_',num2str(model_index),'_',model_type, '.par'];
+        ParamFile = ['parameters/syn_',model_index,'_',model_type, '.par'];
         md = parameterize(md, ParamFile);
         
-        % adding time-dependent melt rate forcing
+        % get data
         syn = testbed_data(geometry_path);
         
-        % time-dependent shear margin weakening
-        N_years = numel(syn.transient_rheoB.years);
-        for i = 1:N_years
-            rheoB_weak_mesh = double(InterpFromGridToMesh(syn.x',syn.y,syn.transient_rheoB.data{i},md.mesh.x,md.mesh.y,0));
-            temp = [rheoB_weak_mesh; syn.transient_rheoB.years{i}]; % vertical concat year
-            if i == 1
-                md.materials.rheology_B = temp;
-            else
-                md.materials.rheology_B = [md.materials.rheology_B, temp];
-            end
-        end
-
-        % time-dependent frictional coefficient
-        N_years = numel(syn.transient_fric_coef.years);
-        for i = 1:N_years
-            fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.transient_fric_coef.data{i}, md.mesh.x, md.mesh.y, 0);
-            temp = [fric_coef_mesh; syn.transient_fric_coef.years{i}]; % vertical concat year
-            if i == 1
-                md.friction.coefficient = temp;
-            else
-                md.friction.coefficient = [md.friction.coefficient, temp];
-            end
-        end
+%         % time-dependent shear margin weakening
+%         N_years = numel(syn.transient_rheoB.years);
+%         for i = 1:N_years
+%             rheoB_weak_mesh = double(InterpFromGridToMesh(syn.x',syn.y,syn.transient_rheoB.data{i},md.mesh.x,md.mesh.y,0));
+%             temp = [rheoB_weak_mesh; syn.transient_rheoB.years{i}]; % vertical concat year
+%             if i == 1
+%                 md.materials.rheology_B = temp;
+%             else
+%                 md.materials.rheology_B = [md.materials.rheology_B, temp];
+%             end
+%         end
+% 
+%         % time-dependent frictional coefficient
+%         N_years = numel(syn.transient_fric_coef.years);
+%         for i = 1:N_years
+%             fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.transient_fric_coef.data{i}, md.mesh.x, md.mesh.y, 0);
+%             temp = [fric_coef_mesh; syn.transient_fric_coef.years{i}]; % vertical concat year
+%             if i == 1
+%                 md.friction.coefficient = temp;
+%             else
+%                 md.friction.coefficient = [md.friction.coefficient, temp];
+%             end
+%         end
         
         
         % time-dependent melt rate
@@ -222,7 +222,7 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
         
         % This .par substitutes much of the final state of the spin-up run
         % to the initial conditions of this transient run
-        ParamFile = ['parameters/syn_',num2str(model_index),'_',model_type, '.par'];
+        ParamFile = ['parameters/syn_',model_index,'_',model_type, '.par'];
         md = parameterize(md, ParamFile);
         
         % acquire the sampled var file and substitute the variable
@@ -286,11 +286,11 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
 %         V.vx  = vx_grid;
 %         V.vy  = vy_grid;
 %         V.vz  = vz_grid;
-%         file_path = ['spinup/spinup_V_',num2str(model_index)];
+%         file_path = ['spinup/spinup_V_',model_index];
 %         save(file_path,'V')
         
         % save the model, md
-        md_file_path = ['spinup_md/spinup_md_', num2str(model_index)];
+        md_file_path = ['spinup_md/spinup_md_', model_index];
         save(md_file_path, 'md');
     end
 end

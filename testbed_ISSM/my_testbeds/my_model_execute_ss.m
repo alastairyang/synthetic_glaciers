@@ -49,7 +49,7 @@ function output = my_model_execute_ss(geometry_path, model_index, model_type)
 	plotmodel(md,'data', 'mesh', 'data',md.mask.ocean_levelset,'title','grounded/floating','data',md.mask.ice_levelset,'title','ice/no-ice')
 	
     %Parameterization #3
-    ParamFile = ['parameters/syn_',num2str(model_index),'_ss.par'];
+    ParamFile = ['parameters/syn_',model_index,'_ss.par'];
 	md = parameterize(md, ParamFile);
     
     %The rheology parameters sit in the material section #md.materials
@@ -114,6 +114,6 @@ function output = my_model_execute_ss(geometry_path, model_index, model_type)
     V.vx  = vx_grid;
     V.vy  = vy_grid;
     V.vz  = vz_grid;
-    file_path = ['steady state/ss_V_',num2str(model_index)];
+    file_path = ['steady state/ss_V_',model_index];
     save(file_path,'V')
 end

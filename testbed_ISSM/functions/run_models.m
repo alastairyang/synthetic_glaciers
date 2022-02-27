@@ -2,7 +2,7 @@ function output_model = run_models(model_index, model_type)
 %RUN_MODELS Control what model to run
 %
 %   Input:
-%       model_index[double]: a numeric model index number
+%       model_index[string]: model index
 %       model_type[string] : either steady-state or transient
 %   Output:
 %       output_model[struc]: a structure storing the ISSM model outputs

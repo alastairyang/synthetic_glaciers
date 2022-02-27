@@ -7,7 +7,7 @@ n = 150; % sine wave sampling points
 ap_coef = 0.05; % filler wave amplitude
 tot_wid = 8700*2; %  total width of this synthetic fjord
 elev_bench = 450; % zero benchmark line for parabola
-tot_width = 7200; % fjord valley width in meter. must be even numbers and multiples of 2n
+fjord_width = 3600*2; % fjord valley width in meter. must be even numbers and multiples of 2n
 tot_length = 35000; 
 fjordwater_length = 3000; % where ice is absent (did i use this?)
 bed_shearstress = 150000; % kPa
@@ -19,14 +19,14 @@ s_margin_width = 8; % length for each shear margin side, 3*150m
 s_margin_weakcoef = 0.3; % weaken to _% of the default value
 fric_coef_ampfactor = 0.3; % weaken to _% of the default fric coef
 slippatch_loc = [50, 58]; % the index coordinate of the gaussian slippery patch
-slippatch_wid = 2000; % sigma in the gaussian function
+slippatch_wid = 0.5*(fjord_width/2); % sigma in the gaussian function; half of fjord half width
 smb_constant = -30; % -30 m we, constant surface mass balance rate (when not using gradient method)
 
 % about the steep upward jump shape
 bottom_top_diff = 700; % 700 meter diff from the top to bottom
 bottom_top_long = 7500; % the distance along thalweg
 
-if tot_wid < tot_width
+if tot_wid < fjord_width
     disp('Total width should be no smaller than fjord width')
     return;
 end
@@ -138,7 +138,7 @@ X = repmat(x, N_tot_wid, 1);
 y = transpose(0:n:(N_tot_wid-1)*n) - (N_tot_wid-1)*n/2; % let y be symmetric wrt thalweg
 Y = repmat(y, 1, numel(thalweg));
 
-width_x = tot_width*ones(numel(thalweg),1);
+width_x = fjord_width*ones(numel(thalweg),1);
 
 % populate each column
 thalweg_i = (N_tot_wid+1)/2; % thalweg index location
@@ -158,8 +158,8 @@ end
 
 %% build fjord wall that levels off
 % make elements beyond the width zero
-wid_left_i  = thalweg_i - (tot_width/n/2);
-wid_right_i = thalweg_i + (tot_width/n/2);
+wid_left_i  = thalweg_i - (fjord_width/n/2);
+wid_right_i = thalweg_i + (fjord_width/n/2);
 syn_b(1:wid_left_i-1,:) = 0;
 syn_b(wid_right_i+1:end,:)= 0;
 
