@@ -8,9 +8,10 @@ ap_coef = 0.05; % filler wave amplitude
 tot_wid = 8700*2; %  total width of this synthetic fjord
 elev_bench = 450; % zero benchmark line for parabola
 fjord_width = 3600*2; % fjord valley width in meter. must be even numbers and multiples of 2n
-tot_length = 35000; 
+tot_length = 100000; % glacier length, 100 km
+shear_length = 30000; % length of shear margins
 fjordwater_length = 3000; % where ice is absent (did i use this?)
-bed_shearstress = 150000; % kPa
+bed_shearstress = 150000; % kPa; for calculating the parabolic icesheet profile
 
 % forcing parameters
 g = 9.81; % gravitational constant
@@ -18,8 +19,9 @@ shear_B = 6.8067e7; % default value for B; later modified for shear margin weake
 s_margin_width = 8; % length for each shear margin side, 3*150m
 s_margin_weakcoef = 0.3; % weaken to _% of the default value
 fric_coef_ampfactor = 0.3; % weaken to _% of the default fric coef
-slippatch_loc_x = 60; % the index coordinate of the gaussian slippery patch
+slippatch_upstream_dist = 10000; % 10 km upstream of the grounding line
 slippatch_wid = 0.5*(fjord_width/2); % sigma in the gaussian function; half of fjord half width
+bump_center_i = 25; % the x index coordinate of the bump center
 smb_constant = -30; % -30 m we, constant surface mass balance rate (when not using gradient method)
 
 % about the steep upward jump shape
@@ -99,8 +101,8 @@ x = 0:n:(N_x_tot-1)*n;
 
 % concatenate
 thalweg = zeros(1, N_x_tot);
-bump_x_beg_i = slippatch_loc_x;
-bump_x_end_i = slippatch_loc_x + numel(wave_x) -1;
+bump_x_beg_i = bump_center_i;
+bump_x_end_i = bump_x_beg_i + numel(wave_x) -1;
 thalweg(bump_x_beg_i:bump_x_end_i) = wave_z;
 
 % Smoothen the thalweg line
@@ -407,7 +409,12 @@ fric_coef = fric_coef_cons*ones(size(syn_b));
 fric_coef_years = melt_years;
 fric_coef_ampfactors  = [1, fric_coef_ampfactor, 1]; % value between 0 and 1
 t_fric_coef   = cell(numel(fric_coef_years), 1);
-slippatch_loc  = [slippatch_loc_x, thalweg_i];
+
+% specify the slippatch location
+% as the row of the thalweg, and the column as some distance upstream of the initial grounding line location.
+slippatch_yi = thalweg_i;
+slippatch_xi = find(isnan(flot_pf(thalweg_i,:)),1) + floor(slippatch_upstream_dist/150);
+slippatch_loc = [slippatch_xi, slippatch_yi];
 for i = 1:numel(fric_coef_years)
     % amplitude: if no perturbation, amp should be zero
     amp = fric_coef_ampfactors(i)*fric_coef_cons - fric_coef_cons;
@@ -485,8 +492,8 @@ syn_rheoB_unif = syn_rheoB;
 syn_rheoB_weak = syn_rheoB;
 % substitute the weakening
 rheoB_weak = shear_B*s_margin_weakcoef;
-syn_rheoB_weak(s_margin_i_left,:)  = rheoB_weak;
-syn_rheoB_weak(s_margin_i_right,:) = rheoB_weak;
+syn_rheoB_weak(s_margin_i_left,1:floor(shear_length/150))  = rheoB_weak;
+syn_rheoB_weak(s_margin_i_right,1:floor(shear_length/150)) = rheoB_weak;
 % aggregate into a structure
 rheoB.rheoB_weak = syn_rheoB_weak;
 rheoB.rheoB_unif = syn_rheoB_unif;
@@ -496,7 +503,7 @@ s_margin_years = melt_years;
 s_margin_amps  = [1, s_margin_weakcoef, 1]; % value between 0 and 1
 t_rheoB_weak   = cell(numel(melt_years), 1);
 for i = 1:numel(s_margin_years)
-    temp_rheoB_weak = transient_shearmargin(shear_B, X, Y, s_margin_i_left, s_margin_i_right, s_margin_amps(i));
+    temp_rheoB_weak = transient_shearmargin(shear_B, X, Y, s_margin_i_left, s_margin_i_right, s_margin_amps(i), shear_length);
     t_rheoB_weak{i} = temp_rheoB_weak;
 end
 % aggregate to structure
@@ -552,37 +559,49 @@ for i = 1:N_sens
     sens_rheoB.(fieldname) = s_margin_weakcoefs(i)*shear_B*ones(size(syn_b));
 end
 
-%% visualize
 figure('Position',[100, 100, 1500, 600])
 subplot(2,3,1)
 mesh(X,Y,syn_b)
-title('bed')
+title('Bed')
 colorbar
 
 subplot(2,3,2)
 mesh(X,Y,syn_s); hold on; mesh(X,Y,syn_base); hold off
-title('surface and base')
+title('Surface and Base')
 colorbar
 
 subplot(2,3,3)
-imagesc(x,y,SMB_cons)
-title('SMB')
-colorbar
+% plot lateral profile
+plot(x, syn_base(thalweg_i, :),'r')
+hold on
+plot(x, syn_s(thalweg_i, :), 'b')
+hold off
+legend('Base','Surface')
 
 subplot(2,3,4)
 imagesc(x,y,ocean_mask)
-title('floating/grounded ice')
+title('Floating/grounded Ice')
+axis equal
+xlim([min(x), max(x)])
+ylim([min(y), max(y)])
 colorbar
 
 subplot(2,3,5)
-imagesc(x,y,fric_coef);
-title('frictional coef')
+imagesc(x,y,transient_fric_coef.data{2});
+title('Frictional Coef')
+axis equal
+xlim([min(x), max(x)])
+ylim([min(y), max(y)])
 colorbar
 
 subplot(2,3,6)
-imagesc(x,y,syn_rheoB)
-title('Rheology B value')
+imagesc(x,y,transient_rheoB.data{2})
+title('Rheology B Value')
+axis equal
+xlim([min(x), max(x)])
+ylim([min(y), max(y)])
 colorbar
+
 
 %% Save the geometry
 syn_000.X = X;

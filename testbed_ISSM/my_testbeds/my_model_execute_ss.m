@@ -52,7 +52,6 @@ function output = my_model_execute_ss(geometry_path, model_index, model_type)
     ParamFile = ['parameters/syn_',model_index,'_ss.par'];
 	md = parameterize(md, ParamFile);
     
-    %The rheology parameters sit in the material section #md.materials
     %B has one value per vertex
     
     md.materials.rheology_B = double(InterpFromGridToMesh(syn.x',syn.y,syn.rheoB.rheoB_unif,md.mesh.x,md.mesh.y,0));
@@ -75,9 +74,6 @@ function output = my_model_execute_ss(geometry_path, model_index, model_type)
 %     % b_pos and b_neg also need to be fields
 %     md.smb.b_pos = repmat(SMB_grad.b_pos, md.mesh.numberofvertices,1); 
 %     md.smb.b_neg = repmat(SMB_grad.b_neg, md.mesh.numberofvertices,1);
-
-    % set constant smb
-    md.smb.mass_balance = InterpFromGridToMesh(syn.x', syn.y, syn.SMB_cons, md.mesh.x, md.mesh.y, 0);
     
 %Set the flow computing method #5
 	md = setflowequation(md, 'HO', 'all');

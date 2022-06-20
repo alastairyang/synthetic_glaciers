@@ -3,3 +3,10 @@
 .DS_Store
 *.lock
 *.png
+*.queue
+GIS/
+*.errlog
+*.outlog
+*.toolkits
+*.gif
+*.icloud

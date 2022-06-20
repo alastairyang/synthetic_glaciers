@@ -8,9 +8,10 @@ ap_coef = 0.05; % filler wave amplitude
 tot_wid = 8700*2; %  total width of this synthetic fjord
 elev_bench = 450; % zero benchmark line for parabola
 fjord_width = 3600*2; % fjord valley width in meter. must be even numbers and multiples of 2n
-tot_length = 35000; 
+tot_length = 100000;  % glacier length in meter
+shear_length = 30000; % length of shear margins
 fjordwater_length = 3000; % where ice is absent (did i use this?)
-bed_shearstress = 150000; % kPa
+bed_shearstress = 100000; % kPa
 
 % forcing parameters
 g = 9.81; % gravitational constant
@@ -18,9 +19,12 @@ shear_B = 6.8067e7; % default value for B; later modified for shear margin weake
 s_margin_width = 8; % length for each shear margin side, 3*150m
 s_margin_weakcoef = 0.3; % weaken to _% of the default value
 fric_coef_ampfactor = 0.3; % weaken to _% of the default fric coef
-slippatch_loc = [50, 58]; % the index coordinate of the gaussian slippery patch
+slippatch_upstream_dist = 10000; % 10 km upstream of the grounding line
 slippatch_wid = 0.5*(fjord_width/2); % sigma in the gaussian function; half of fjord half width
-smb_constant = -30; % -30 m we, constant surface mass balance rate (when not using gradient method)
+smb_constant = 0; % 0 m we, constant surface mass balance rate (when not using gradient method)
+
+% profile option: 'linear' or 'plastic'
+profile = 'plastic';
 
 % about the steep upward jump shape
 bottom_top_diff = 700; % 700 meter diff from the top to bottom
@@ -208,7 +212,7 @@ ep = [bp_x, s_bp]; % ep stands for end point, end point for shelf (potentially)
 % create a synthetic ice shelf elevation that (temporarily) extends to the
 % end of fjord length
 % this profile is just a striaight line constrained by two points
-hp = [0, 5]; % at the ice shelf front
+hp = [0, 40]; % at the ice shelf front
 if hp(1) > ep(1)
     disp('the x of the head higher than the end now, choose a new x for head point')
     return
@@ -295,11 +299,23 @@ x_syn_linear_noshelf = X(1, M+1:end);
 % sl_syn_sample = sl_syn_linear(sample_i);
 % sl_syn_spline = spline(x_syn_sample, sl_syn_sample, x_syn_linear_noshelf);
 
-% plastic rheology
-% H(x) = sqrt(2*ss*x/(rho*g))
-x_plastic = 0:n:(numel(x_syn_linear_noshelf)-1)*n;
-% displaced to the elevation at the end of the ice shelf
-sl_syn_spline = sqrt(2*bed_shearstress.*x_plastic/(rho_ice*g)) + s_end;
+if strcmp(profile, 'plastic')
+    % plastic rheology
+    % H(x) = sqrt(2*ss*x/(rho*g))
+    x_plastic = 0:n:(numel(x_syn_linear_noshelf)-1)*n;
+    % displaced to the elevation at the end of the ice shelf
+    sl_syn_spline = sqrt(2*bed_shearstress.*x_plastic/(rho_ice*g)) + s_end;
+    
+elseif strcmp(profile, 'linear')
+    % linear profile
+    x_plastic = 0:n:(numel(x_syn_linear_noshelf)-1)*n;
+    % we still use the end elevation from plastic profile to estimate
+    % thickness near the ice divide
+    s_plastic = sqrt(2*bed_shearstress.*x_plastic/(rho_ice*g)) + s_end;
+    pf_slope = (s_plastic(end)-s_end)/(x_plastic(end)-x_plastic(1));
+    sl_syn_spline = pf_slope*x_plastic + s_end;
+    
+end
 
 % put together
 this_shelfline(M+1:end) = sl_syn_spline;
@@ -396,6 +412,12 @@ fric_coef = fric_coef_cons*ones(size(syn_b));
 fric_coef_years = melt_years;
 fric_coef_ampfactors  = [1, fric_coef_ampfactor, 1]; % value between 0 and 1
 t_fric_coef   = cell(numel(fric_coef_years), 1);
+
+% specify the slippatch location
+% as the row of the thalweg, and the column as some distance upstream of the initial grounding line location.
+slippatch_yi = thalweg_i;
+slippatch_xi = find(isnan(flot_pf(thalweg_i,:)),1) + floor(slippatch_upstream_dist/150);
+slippatch_loc = [slippatch_xi, slippatch_yi];
 for i = 1:numel(fric_coef_years)
     % amplitude: if no perturbation, amp should be zero
     amp = fric_coef_ampfactors(i)*fric_coef_cons - fric_coef_cons;
@@ -466,15 +488,17 @@ syn_b_grad = transpose(gradient(syn_b'));
 [~, min_i] = min(syn_b_grad, [], 'all', 'linear');
 [row_min, col_min] = ind2sub(size(syn_b_grad),min_i);
 [row_max, col_max] = ind2sub(size(syn_b_grad),max_i);
+
+% now get the index for both margins
 s_margin_i_left  = row_min:row_min + s_margin_width;
 s_margin_i_right = row_max:-1:row_max - s_margin_width;
 syn_rheoB = shear_B*ones(size(syn_b));
 syn_rheoB_unif = syn_rheoB;
-syn_rheoB_weak = syn_rheoB;
 % substitute the weakening
+syn_rheoB_weak = syn_rheoB;
 rheoB_weak = shear_B*s_margin_weakcoef;
-syn_rheoB_weak(s_margin_i_left,:)  = rheoB_weak;
-syn_rheoB_weak(s_margin_i_right,:) = rheoB_weak;
+syn_rheoB_weak(s_margin_i_left,1:floor(shear_length/150))  = rheoB_weak;
+syn_rheoB_weak(s_margin_i_right,1:floor(shear_length/150)) = rheoB_weak;
 % aggregate into a structure
 rheoB.rheoB_weak = syn_rheoB_weak;
 rheoB.rheoB_unif = syn_rheoB_unif;
@@ -484,7 +508,7 @@ s_margin_years = melt_years;
 s_margin_amps  = [1, s_margin_weakcoef, 1]; % value between 0 and 1
 t_rheoB_weak   = cell(numel(melt_years), 1);
 for i = 1:numel(s_margin_years)
-    temp_rheoB_weak = transient_shearmargin(shear_B, X, Y, s_margin_i_left, s_margin_i_right, s_margin_amps(i));
+    temp_rheoB_weak = transient_shearmargin(shear_B, X, Y, s_margin_i_left, s_margin_i_right, s_margin_amps(i), shear_length);
     t_rheoB_weak{i} = temp_rheoB_weak;
 end
 % aggregate to structure
@@ -544,33 +568,54 @@ end
 figure('Position',[100, 100, 1500, 600])
 subplot(2,3,1)
 mesh(X,Y,syn_b)
-title('bed')
+title('Bed')
 colorbar
 
 subplot(2,3,2)
 mesh(X,Y,syn_s); hold on; mesh(X,Y,syn_base); hold off
-title('surface and base')
+title('Surface and Base')
 colorbar
 
 subplot(2,3,3)
-imagesc(x,y,SMB_cons)
-title('SMB')
-colorbar
+% plot lateral profile
+plot(x, syn_base(thalweg_i, :),'r')
+hold on
+plot(x, syn_s(thalweg_i, :), 'b')
+hold off
+legend('Base','Surface')
 
 subplot(2,3,4)
 imagesc(x,y,ocean_mask)
-title('floating/grounded ice')
+title('Floating/grounded Ice')
+axis equal
+xlim([min(x), max(x)])
+ylim([min(y), max(y)])
 colorbar
 
 subplot(2,3,5)
-imagesc(x,y,fric_coef);
-title('frictional coef')
+imagesc(x,y,transient_fric_coef.data{2});
+title('Frictional Coef')
+axis equal
+xlim([min(x), max(x)])
+ylim([min(y), max(y)])
 colorbar
 
 subplot(2,3,6)
-imagesc(x,y,syn_rheoB)
-title('Rheology B value')
+imagesc(x,y,transient_rheoB.data{2})
+title('Rheology B Value')
+axis equal
+xlim([min(x), max(x)])
+ylim([min(y), max(y)])
 colorbar
+
+%% Only the geometry
+figure;
+mesh(X,Y,syn_s)
+colormap summer; hold on
+mesh(X,Y,syn_base); hold off
+shading interp
+grid off
+axis off
 
 %% Save the geometry
 syn_0.X = X;

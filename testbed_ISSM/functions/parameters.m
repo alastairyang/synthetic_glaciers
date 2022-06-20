@@ -11,7 +11,7 @@ function params = parameters(input)
         exponent = 1;
         dt = 0.1; % 
         nt_t = 1000; % transient run number of iterations
-        nt_spinup = 2500; % spinup run, number of iterations
+        nt_spinup = 2000; % spinup run, number of iterations
         max_stress_grounded = 1000000.0; % 1 MPa
         max_stress_floating = 100000.0; % 100 kPa (0.1*max stress grounded)
 

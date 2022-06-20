@@ -1,4 +1,4 @@
-function rheoB_weak = transient_shearmargin(rheoB, X, Y, left_mar, right_mar, amp)
+function rheoB_weak = transient_shearmargin(rheoB, X, Y, left_mar, right_mar, amp, length)
 %TRANSIENT_SHEARMARGIN This function creates a transient shear margin
 %weakening. The weakenining is approximated by a parabolic function
 %
@@ -11,6 +11,7 @@ function rheoB_weak = transient_shearmargin(rheoB, X, Y, left_mar, right_mar, am
 %       right_mar [int array]: vector of index representing right shear
 %                              margin location
 %       amp          [double]: amplitude, the lowerest point of parabola
+%       length       [double]: length of the shear margin
 %
     
     % a check first
@@ -49,8 +50,8 @@ function rheoB_weak = transient_shearmargin(rheoB, X, Y, left_mar, right_mar, am
     
     % substitute in the original rheoB matrix
     rheoB_weak = rheoB_cons;
-    rheoB_weak(left_mar,:)  = parabola_all;
-    rheoB_weak(right_mar,:) = parabola_all;
+    rheoB_weak(left_mar,1:floor(length/150))  = parabola_all(:,1:floor(length/150));
+    rheoB_weak(right_mar,1:floor(length/150)) = parabola_all(:,1:floor(length/150));
 
 end
 

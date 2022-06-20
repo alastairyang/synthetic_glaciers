@@ -1,11 +1,11 @@
 %% Model name and parameter
-index = 0;
-type  = 't';
+index = 00;
+type  = 'spinup';
+load('spinup_md/spinup_md_00.mat')
 
 % Start
 name = [num2str(index), '_', type];
 fullname = ['model_',name];
-md = model_out.(fullname); % change this!
 nt = md.timestepping.final_time/md.timestepping.time_step;
 
 %% diff
@@ -14,7 +14,7 @@ plotmodel(md, 'data',md.results.TransientSolution(end).MaskOceanLevelset - ...
                      md.results.TransientSolution(1).MaskOceanLevelset,...
               'data',md.results.TransientSolution(end).Thickness - ...
                      md.results.TransientSolution(1).Thickness);
-% just the Velocity
+%% just the Velocity
 plotmodel(md, 'data', md.results.TransientSolution(1).Vel,...
               'data', md.results.TransientSolution(end).Vel)
 %% Visualize mean velocity over time
@@ -38,7 +38,7 @@ subplot(1,2,2); plot(1:nt, above_vol);
 
 %% Visualize thickness along the thalweg
 % inquire X,Y
-[geometry, ~] = query_data(index, type);
+[geometry, ~] = query_data(num2str(index), type);
 syn = testbed_data(geometry{1});
 X = syn.X;
 Y = syn.Y;
@@ -54,9 +54,9 @@ figure;
 thalweg_h_mean_line = [];
 for i = selected
     subplot(1,2,1)
-    thalweg_h_grid = griddata(md.mesh.x, md.mesh.y,...
+    thalweg_h_grid = InterpFromMeshToGrid(md.mesh.elements, md.mesh.x, md.mesh.y,...
                                         md.results.TransientSolution(i).Surface,...
-                                        X, Y);
+                                        x, y);
     thalweg_h_line = thalweg_h_grid(mid_i,:);
     plot(thalweg_x, thalweg_h_line)
     thalweg_h_mean_line = [thalweg_h_mean_line; mean(thalweg_h_line,'all')];
@@ -68,7 +68,7 @@ plot(selected, thalweg_h_mean_line)
 
 %% Visualize thickness at sampled points along the thalweg
 % inquire X,Y
-[geometry, ~] = query_data(index, type);
+[geometry, ~] = query_data(num2str(index), type);
 syn = testbed_data(geometry{1});
 X = syn.X;
 Y = syn.Y;
@@ -83,9 +83,9 @@ sample_i = 1:5:100;
 figure;
 thalweg_sample_ht = [];
 for i = selected
-    thalweg_h_grid = griddata(md.mesh.x, md.mesh.y,...
+    thalweg_h_grid = InterpFromMeshToGrid(md.mesh.elements, md.mesh.x, md.mesh.y,...
                                         md.results.TransientSolution(i).Surface,...
-                                        X, Y);
+                                        x, y);
     thalweg_sample_h  = thalweg_h_grid(mid_i,sample_i);
     thalweg_sample_ht = [thalweg_sample_ht; thalweg_sample_h];
     
@@ -95,7 +95,7 @@ thalweg_sample_ht = thalweg_sample_ht./thalweg_sample_ht(1,:);
 plot(selected, thalweg_sample_ht)
 
 %% Animate change in lateral profile
-[geometry, ~] = query_data(index, type);
+[geometry, ~] = query_data(num2str(index), type);
 syn = testbed_data(geometry{1});
 if rem(size(syn.X,1), 2) == 0
     mid_i = size(syn.X,1)/2;
@@ -107,12 +107,12 @@ thalweg_x = syn.X(mid_i,:);
 figure;
 selected = 1:floor(nt*0.05):nt;
 for i = selected
-    thalweg_h_grid = griddata(md.mesh.x, md.mesh.y,...
+    thalweg_h_grid = InterpFromMeshToGrid(md.mesh.elements,md.mesh.x, md.mesh.y,...
                                         md.results.TransientSolution(i).Surface,...
-                                        syn.X, syn.Y);
-    thalweg_base_grid = griddata(md.mesh.x, md.mesh.y,...
-                                        md.results.TransientSolution(i).Base,...
-                                        syn.X, syn.Y);
+                                        syn.x, syn.y, 0);
+    thalweg_base_grid = InterpFromMeshToGrid(md.mesh.elements,md.mesh.x, md.mesh.y,...
+                                        md.results.TransientSolution(i).Surface - md.results.TransientSolution(i).Thickness,...
+                                        syn.x, syn.y, 0);
     thalweg_h_line = thalweg_h_grid(mid_i,:);
     thalweg_base_line = thalweg_base_grid(mid_i,:);
     thalweg_both = [thalweg_h_line; thalweg_base_line];
@@ -162,9 +162,9 @@ y = y_min:ns:y_max;
 
 Ht = zeros(numel(y), numel(x), nt);
 for i = 1:nt
-    this_Ht = griddata(md.mesh.x, md.mesh.y,...
+    this_Ht = InterpFromMeshToGrid(md.mesh.elements,md.mesh.x, md.mesh.y,...
                        md.results.TransientSolution(i).Surface,...
-                       X, Y);
+                       x, y);
     Ht(:,:,i) = this_Ht;
 end
 
@@ -177,12 +177,12 @@ title('Mode 1')
 subplot(2,2,2); imagesc(x, y,eofmaps(:,:,2)); axis xy image off; cmocean('delta','pivot',0);
 title('Mode 2')
 % add the grounding line and bed plot
-bed = griddata(md.mesh.x, md.mesh.y,...
+bed = InterpFromMeshToGrid(md.mesh.elements, md.mesh.x, md.mesh.y,...
                        md.geometry.bed,...
-                       X, Y);
-levelset = griddata(md.mesh.x, md.mesh.y,...
+                       x, y);
+levelset = InterpFromMeshToGrid(md.mesh.elements. md.mesh.x, md.mesh.y,...
                        md.results.TransientSolution(end).MaskOceanLevelset,...
-                       X, Y);
+                       x, y);
 subplot(2,2,3); imagesc(x, y, levelset); axis xy image off; title('Ocean Levelset')
 set(gca, 'CLim', [-5,5])
 subplot(2,2,4); imagesc(x, y, bed);  axis xy image off; title('Bed')

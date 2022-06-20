@@ -1,4 +1,4 @@
-function output = my_model_execute_t(geometry_path, velocity_path, model_path, model_index, model_type)
+function output = my_model_execute_t(geometry_path, velocity_path, model_path, model_index, model_type, forcing)
 %%  Model 
     tb = table();
     % the parameters() function is simply to store hyperparamters of
@@ -37,7 +37,7 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
         load(velocity_path); % loaded as 'V'
         vel_mesh = InterpFromGridToMesh(syn.x',syn.y,V.vel, md.mesh.x,md.mesh.y,0);
         % Speed
-        md = bamg(md,'hmin',200,'hmax',2000,'field',vel_mesh,'err',5);
+        md = bamg(md,'hmin',200,'hmax',5000,'field',vel_mesh,'err',5);
         %md=triangle(md, 'Domain.exp');
         plotmodel(md, 'data','mesh')
 
@@ -86,45 +86,6 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
         % Constant melt rate forcing
         shelf_melt_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.shelf_melt.transient_melt{1}, md.mesh.x, md.mesh.y, 0);
         md.basalforcings.floatingice_melting_rate = shelf_melt_mesh;
-
-%         % adding time-dependent melt rate forcing
-%         % THIS IS TEMPORARY
-%         [x, y, X, Y, ~, ~, ~, ~, ~, ~, ~, ~, ~, shelf_melt, ~] = testbed_data(geometry_path);
-%         N_years = numel(shelf_melt.melt_years);
-%         for i = 1:N_years
-%             shelf_melt_mesh = InterpFromGridToMesh(x', y, shelf_melt.transient_melt{i}, md.mesh.x, md.mesh.y, 0);
-%             temp = [shelf_melt_mesh; shelf_melt.melt_years{i}]; % vertical concat year
-%             if i == 1
-%                 md.basalforcings.floatingice_melting_rate = temp;
-%             else
-%                 md.basalforcings.floatingice_melting_rate = [md.basalforcings.floatingice_melting_rate, temp];
-%             end
-%         end
-        
-
-%         % use PICO model for basal shelf melting rate
-%         disp(' Start parameterizing shelf basal melting rate')
-%         md.basalforcings = basalforcingspico();
-%         md.basalforcings.basin_id = ones(md.mesh.numberofelements,1);
-%         md.basalforcings.num_basins = 1;
-%         md.basalforcings.maxboxcount = 5;
-%         melt_year_axis = [1, 70, 90]; % year
-%         md.basalforcings.farocean_temperature = [1.0 + 273.15, 10.0 + 273.15, 5.0 + 273.75; melt_year_axis];
-%         md.basalforcings.farocean_salinity = [34.73, 34.73, 34.73; melt_year_axis]; % salinity; value taken from ISSM manual example as placeholder
-%         md.basalforcings.isplume = 0;
-%         md.basalforcings.geothermalflux = zeros(md.mesh.numberofvertices, 1);
-%         md.basalforcings.groundedice_melting_rate = 0.0*ones(md.mesh.numberofvertices, 1);
-        
-        %set the surface mass balance
-%         disp(' Start parameterizing SMB')
-%         md.smb = SMBgradients();
-%         href_mesh   = InterpFromGridToMesh(x', y, SMB_grad.href, md.mesh.x, md.mesh.y, 0);
-%         smbref_mesh = InterpFromGridToMesh(x', y, SMB_grad.smbref, md.mesh.x, md.mesh.y, 0);
-%         md.smb.href   = href_mesh;
-%         md.smb.smbref = smbref_mesh;
-%         % b_pos and b_neg also need to be fields
-%         md.smb.b_pos = repmat(SMB_grad.b_pos, md.mesh.numberofvertices,1); 
-%         md.smb.b_neg = repmat(SMB_grad.b_neg, md.mesh.numberofvertices,1);
         
         % if using constant smb
         %md.smb.mass_balance = InterpFromGridToMesh(x', y, SMB_cons, md.mesh.x, md.mesh.y, 0);
@@ -161,42 +122,95 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
         % get data
         syn = testbed_data(geometry_path);
         
-%         % time-dependent shear margin weakening
-%         N_years = numel(syn.transient_rheoB.years);
-%         for i = 1:N_years
-%             rheoB_weak_mesh = double(InterpFromGridToMesh(syn.x',syn.y,syn.transient_rheoB.data{i},md.mesh.x,md.mesh.y,0));
-%             temp = [rheoB_weak_mesh; syn.transient_rheoB.years{i}]; % vertical concat year
-%             if i == 1
-%                 md.materials.rheology_B = temp;
-%             else
-%                 md.materials.rheology_B = [md.materials.rheology_B, temp];
-%             end
-%         end
-% 
-%         % time-dependent frictional coefficient
-%         N_years = numel(syn.transient_fric_coef.years);
-%         for i = 1:N_years
-%             fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.transient_fric_coef.data{i}, md.mesh.x, md.mesh.y, 0);
-%             temp = [fric_coef_mesh; syn.transient_fric_coef.years{i}]; % vertical concat year
-%             if i == 1
-%                 md.friction.coefficient = temp;
-%             else
-%                 md.friction.coefficient = [md.friction.coefficient, temp];
-%             end
-%         end
-        
-        
-        % time-dependent melt rate
-        N_years = numel(syn.shelf_melt.melt_years);
-        for i = 1:N_years
-            shelf_melt_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.shelf_melt.transient_melt{i}, md.mesh.x, md.mesh.y, 0);
-            temp = [shelf_melt_mesh; syn.shelf_melt.melt_years{i}]; % vertical concat year
-            if i == 1
-                md.basalforcings.floatingice_melting_rate = temp;
+        if ~isempty(forcing)
+            if strcmp('all',forcing)
+                disp('Forcing: all forcing, ON')
+                pause(1)
+                % time-dependent shear margin weakening
+                N_years = numel(syn.transient_rheoB.years);
+                for i = 1:N_years
+                    rheoB_weak_mesh = double(InterpFromGridToMesh(syn.x',syn.y,syn.transient_rheoB.data{i},md.mesh.x,md.mesh.y,0));
+                    temp = [rheoB_weak_mesh; syn.transient_rheoB.years{i}]; % vertical concat year
+                    if i == 1
+                        md.materials.rheology_B = temp;
+                    else
+                        md.materials.rheology_B = [md.materials.rheology_B, temp];
+                    end
+                end
+
+                % time-dependent frictional coefficient
+                N_years = numel(syn.transient_fric_coef.years);
+                for i = 1:N_years
+                    fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.transient_fric_coef.data{i}, md.mesh.x, md.mesh.y, 0);
+                    temp = [fric_coef_mesh; syn.transient_fric_coef.years{i}]; % vertical concat year
+                    if i == 1
+                        md.friction.coefficient = temp;
+                    else
+                        md.friction.coefficient = [md.friction.coefficient, temp];
+                    end
+                end
+
+                % time-dependent melt rate
+                N_years = numel(syn.shelf_melt.melt_years);
+                for i = 1:N_years
+                    shelf_melt_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.shelf_melt.transient_melt{i}, md.mesh.x, md.mesh.y, 0);
+                    temp = [shelf_melt_mesh; syn.shelf_melt.melt_years{i}]; % vertical concat year
+                    if i == 1
+                        md.basalforcings.floatingice_melting_rate = temp;
+                    else
+                        md.basalforcings.floatingice_melting_rate = [md.basalforcings.floatingice_melting_rate, temp];
+                    end
+                end
+                
+            elseif strcmp('fric',forcing)
+                disp('Forcing: fric.coef perturbation, ON')
+                pause(1)
+                % time-dependent frictional coefficient
+                N_years = numel(syn.transient_fric_coef.years);
+                for i = 1:N_years
+                    fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.transient_fric_coef.data{i}, md.mesh.x, md.mesh.y, 0);
+                    temp = [fric_coef_mesh; syn.transient_fric_coef.years{i}]; % vertical concat year
+                    if i == 1
+                        md.friction.coefficient = temp;
+                    else
+                        md.friction.coefficient = [md.friction.coefficient, temp];
+                    end
+                end
+                
+            elseif strcmp('rheoB',forcing)
+                % time-dependent shear margin weakening
+                N_years = numel(syn.transient_rheoB.years);
+                for i = 1:N_years
+                    rheoB_weak_mesh = double(InterpFromGridToMesh(syn.x',syn.y,syn.transient_rheoB.data{i},md.mesh.x,md.mesh.y,0));
+                    temp = [rheoB_weak_mesh; syn.transient_rheoB.years{i}]; % vertical concat year
+                    if i == 1
+                        md.materials.rheology_B = temp;
+                    else
+                        md.materials.rheology_B = [md.materials.rheology_B, temp];
+                    end
+                end
+                
+            elseif strcmp('meltrates',forcing)
+                disp('Forcing: submarine melting, ON')
+                pause(1)
+                % time-dependent melt rate
+                N_years = numel(syn.shelf_melt.melt_years);
+                for i = 1:N_years
+                    shelf_melt_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.shelf_melt.transient_melt{i}, md.mesh.x, md.mesh.y, 0);
+                    temp = [shelf_melt_mesh; syn.shelf_melt.melt_years{i}]; % vertical concat year
+                    if i == 1
+                        md.basalforcings.floatingice_melting_rate = temp;
+                    else
+                        md.basalforcings.floatingice_melting_rate = [md.basalforcings.floatingice_melting_rate, temp];
+                    end
+                end
             else
-                md.basalforcings.floatingice_melting_rate = [md.basalforcings.floatingice_melting_rate, temp];
+                disp('No forcing? Strings do not match')
+                pause(2)
+                return
             end
-        end      
+        end
+
         
         % Constant melt: just to make sure that this imported model stays
         % in steady-state
@@ -263,34 +277,15 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
     output = md;
     
 %% Saving
-% % If spinup run, we save velocity and the model itself
+% % If spinup run, we save the model itself
      if strcmp(model_type, 'spinup')
-%         vel_grid = griddata(md.mesh.x, md.mesh.y,...
-%                                     md.results.TransientSolution(end).Vel,...
-%                                     X, Y);
-%         vx_grid  = griddata(md.mesh.x, md.mesh.y,...
-%                                     md.results.TransientSolution(end).Vx,...
-%                                     X, Y);
-%         vy_grid  = griddata(md.mesh.x, md.mesh.y,...
-%                                     md.results.TransientSolution(end).Vy,...
-%                                     X, Y);
-%         try % if SSA model, there is no vz         
-%             vz_grid  = griddata(md.mesh.x, md.mesh.y,...
-%                                         md.results.TransientSolution(end).Vz,...
-%                                         X, Y);
-%         catch
-%             vz_grid  = zeros(size(vy_grid));
-%         end
-%         
-%         V.vel = vel_grid;
-%         V.vx  = vx_grid;
-%         V.vy  = vy_grid;
-%         V.vz  = vz_grid;
-%         file_path = ['spinup/spinup_V_',model_index];
-%         save(file_path,'V')
-        
+
         % save the model, md
         md_file_path = ['spinup_md/spinup_md_', model_index];
+        save(md_file_path, 'md');
+     elseif strcmp(model_type, 't')
+        foldername = ['syn_', model_index];
+        md_file_path = ['results/', foldername, '/t_md_', model_index,'_', forcing];
         save(md_file_path, 'md');
     end
 end

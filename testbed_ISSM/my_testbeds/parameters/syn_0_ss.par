@@ -81,14 +81,18 @@ md.masstransport.spcthickness(boundary_nodes) = md.geometry.thickness(boundary_n
 % md.masstransport.spcthickness(max_y_i) = NaN; % don't fix the thickness in the lateral boundary
 % md.masstransport.spcthickness(min_y_i) = NaN;
 % 
-% disp('    Fixing the flux at the inflow boundary')
-% %max_x_i = find(md.mesh.x == max(md.mesh.x));
-% % no across flow at the boundary
-% md.stressbalance.spcvy(max_y_i) = 0; 
-% md.stressbalance.spcvy(min_y_i) = 0;
-% % no slip at the lateral boundary
-% md.stressbalance.spcvx(max_y_i) = 0;
-% md.stressbalance.spcvx(min_y_i) = 0;
+disp('    Fixing the flux at the inflow boundary')
+max_x_i = find(md.mesh.x == max(md.mesh.x));
+% velocity at near the ice divide
+A = 3.8e-24; % softness constant
+sec2year = 365*24*3600; % secs in a year
+g = 9.8; % gravitational constant
+alpha = 0.0001; % rougly at 100 km from terminus as measured in QGIS
+n = 3;
+% Get the H at the influx boundary
+H_bc = md.geometry.thickness(max_x_i);
+U = 2*A*(md.materials.rho_ice*g*alpha)^n*H_bc.^(n+1)*sec2year/(n+1);
+md.stressbalance.spcvx(max_x_i) = U; % m/yr
 
 % % boundary velocity Dirichlet B.C.
 % md.stressbalance.spcvx = NaN*ones(md.mesh.numberofvertices, 1);

@@ -54,14 +54,29 @@ pos = find(sum(md.mask.ocean_levelset(md.mesh.elements)<0.,2) >0.);
 vertexonfloatingice = zeros(md.mesh.numberofvertices,1);
 vertexonfloatingice(md.mesh.elements(pos,:)) = 1.;
 vertexonicefront = double(md.mesh.vertexonboundary & vertexonfloatingice);
-vertexnoticefront = md.mesh.vertexonboundary - vertexonicefront;
-% Get the thickness and fix the thickness there
-fixh_i = find(vertexnoticefront == 1);
-md.masstransport.spcthickness(fixh_i) = md.geometry.thickness(fixh_i);
+
+% ice divide: fixed thickness
+influx_vertices = find(md.mesh.x==max(md.mesh.x));
+md.masstransport.spcthickness(influx_vertices) = md.geometry.thickness(influx_vertices);
+% calving front: fixed thickness
+icefront_i = find(vertexonicefront == 1);
+md.masstransport.spcthickness(icefront_i) = md.geometry.thickness(icefront_i);
+% near ice divide: fixed velocity (fixed flux)
+disp('    Fixing the velocity at the inflow boundary')
+max_x_i = find(md.mesh.x == max(md.mesh.x));
+% velocity at near the ice divide
+A = 3.8e-24; % softness constant
+sec2year = 365*24*3600; % secs in a year
+g = 9.8; % gravitational constant
+alpha = 0.0001; % rougly at 100 km from terminus as measured in QGIS
+n = 3;
+% Get the H at the influx boundary
+H_bc = md.geometry.thickness(max_x_i);
+U = 2*A*(md.materials.rho_ice*g*alpha)^n*H_bc.^(n+1)*sec2year/(n+1);
+md.stressbalance.spcvx(max_x_i) = U; % m/yr
 
 disp('    Initiate levelset')
 md.levelset.spclevelset = md.results.TransientSolution(end).MaskIceLevelset;
-icefront_i = find(vertexonicefront == 1);
 md.levelset.spclevelset(icefront_i) = 0; % ice front needs to be zero
 
 

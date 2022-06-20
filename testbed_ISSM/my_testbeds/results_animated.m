@@ -3,27 +3,34 @@
 %% Parameters
 index = '0';
 model_type  = 't';
+model_index = ['syn_', index];
 
 
 %% Load the data
-model_index = ['syn_', index];
-mr = load(['results/',model_index, '_', 'meltrates.mat']);
-fr = load(['results/',model_index, '_', 'fric.mat']);
-rB = load(['results/',model_index, '_', 'rheoB.mat']);
-mr_fr = load(['results/', model_index, '_', 'meltrates_fric.mat']);
-mr_rB = load(['results/', model_index, '_', 'meltrates_rheoB.mat']);
-fr_rB = load(['results/',model_index, '_', 'rheoB_fric.mat']);
-mr_fr_rB = load(['results/',model_index, '_', 'meltrates_rheoB_fric.mat']);
+mr = load(['results/',model_index, '/', 't_md_',num2str(index), '_meltrate.mat']);
+gifname = [index, '_mr.gif'];
+md = mr.md;
+%%
+fr = load(['results/',model_index, '/', 't_md_',num2str(index), '_fric.mat']);
+gifname = [index, '_fr.gif'];
+md = fr.md;
+%%
+rB = load(['results/',model_index, '/', 't_md_',num2str(index), '_rheoB.mat']);
+gifname = [index, '_rB.gif'];
+md = rB.md;
+% mr_fr = load(['results/', model_index, '/', 'meltrates_fric.mat']);
+% mr_rB = load(['results/', model_index, '/', 'meltrates_rheoB.mat']);
+% fr_rB = load(['results/',model_index, '/', 'rheoB_fric.mat']);
+%%
+mr_fr_rB = load(['results/',model_index, '/', 't_md_', num2str(index), '_meltrates_rheoB_fric.mat']);
+gifname = [index, '_fr.gif'];
+md = mr_fr_rB.md;
 
 %% Main Script
 % Both the surface elevation and elevation time series are animated
 % synchronously
 % we need to interp the meshgrid data back to our regular grid
-
-gifname = '0_meltrate_withVel.gif';
-md = mr_fr_rB.md;
-
-%% 
+% 
 [geometry, ~] = query_data(index, model_type);
 syn = testbed_data(geometry{1});
 X = syn.X;
@@ -231,7 +238,7 @@ disp('Regridding of forcing and elevation data is complete')
 
 %%
 pausetime = 0.2;
-figure('Position',[100, 100, 1800,1400]);
+figure('Position',[100, 100, 1600,800]);
 
 % Create color gradient
 color_length = numel(sample_i);
@@ -255,41 +262,37 @@ for i = start_i:N_t_selected
     count_i = count_i + 1;
     % update title 
     titlestr = ['Year = ', num2str(real_t_selected(i))];
-    sgtitle(titlestr)
+    sgtitle(titlestr,'FontSize',16)
 
-    subplot(2,4,1)
+    subplot(2,3,1)
     imagesc(x, y, fric{i})
     colorbar
     caxis([min(all_fric,[],'all'), max(all_fric,[],'all')])
-    title('Frictional Coefficient')
+    title('Frictional Coefficient','FontSize',16)
 
-    subplot(2,4,2)
+    subplot(2,3,2)
     imagesc(x, y, rheo{i})
     colorbar
     caxis([min(all_rheo,[],'all'), max(all_rheo,[],'all')])
-    title('Rheology B')
+    title('Rheology B','FontSize', 16)
 
-    subplot(2,4,3)
+    subplot(2,3,3)
     plot(real_t_selected(1:i), melt_t(1:i),'-*'); hold on
     ylim([0,150]) % subject to changes
     xlim([real_t_selected(start_i), real_t_selected(end)])
-    title('Floating ice basal melting rates')
+    title('Floating ice basal melting rates','FontSize', 16)
 
     % In this subplot, we plot the 2D elevation change map
-    subplot(2,4,4)
-    if count_i == 1
-        imagesc(x, y, zeros(size(elev{i})))
-    else
-        imagesc(x, y, elev{i} - elev{i-1})
-    end
+    subplot(2,3,4)
+    imagesc(x,y, syn.bed)
     colorbar
     caxis([elev_min, elev_max])
-    title('Elevation change dh/dt')
+    title('Bed topography and ground control points','FontSize',16)
     hold on
     scatter(sample_x, sample_y, 20, colors_p,'filled')
     
     % Surface elevation time series
-    subplot(2,4,5)
+    subplot(2,3,5)
     colororder(colors_p)
     for j = 1:numel(sample_i)
         plot(real_t_selected(1:i), thalweg_sample_ht(j,1:i),...
@@ -297,31 +300,31 @@ for i = start_i:N_t_selected
     end
     xlim([real_t_selected(start_i), real_t_selected(end)])
     ylim([0, 1.5])
-    title('Normalized elevation change at sampled locations')
+    title('Normalized elevation change at ground control points', 'FontSize', 16)
 
     % lateral profiles
-    subplot(2,4,6)
+    subplot(2,3,6)
     colororder(colors_p)
     plot(x, lateral_h(i,:)); hold on
     plot(x, lateral_b(i,:)); hold on
-    title('Lateral Profile')
+    title('Lateral Profile','FontSize', 16)
     xlabel('x (m)')
     ylabel('z (m)')
 
     % longitudinal and lateral stress fields
-    subplot(2,4,7)
-    imagesc(x, y, longi_dev_stress{i})
-    title('Longitudinal Stress')
-    colorbar
-    colormap jet
-    caxis([longi_min, longi_max])
-
-    subplot(2,4,8)
-    imagesc(x, y, Vel{i})
-    title('Velocity')
-    colorbar
-    colormap jet
-    caxis([vel_min, vel_max])
+%     subplot(2,4,7)
+%     imagesc(x, y, longi_dev_stress{i})
+%     title('Longitudinal Stress')
+%     colorbar
+%     colormap jet
+%     caxis([longi_min, longi_max])
+% 
+%     subplot(2,4,8)
+%     imagesc(x, y, Vel{i})
+%     title('Velocity')
+%     colorbar
+%     colormap jet
+%     caxis([vel_min, vel_max])
 
     pause(pausetime)
     gif
