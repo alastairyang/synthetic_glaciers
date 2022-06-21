@@ -10,7 +10,7 @@ function [geo_filepath, v_filepath, md_filepath, sens_filepath] = query_data(mod
 %       data_paths[struc]  : a structure storing the paths to data files
     current_dir = pwd;
     % get the path of the gemoetry file given the model index
-    geo_filename = ['syn_', model_index,'.mat'];
+    geo_filename = ['geom_', model_index,'.mat'];
     geo_filepath = get_absolute_path('git_research',geo_filename);
     v_filepath  = [];
     md_filepath = [];

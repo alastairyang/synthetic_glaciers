@@ -15,7 +15,7 @@ mdvar_combs = readtable('md_var_combinations.csv');
 N_var = size(mdvar_combs,2);
 N_mds = size(mdvar_combs,1);
 varnames = mdvar_combs.Properties.VariableNames;
-vartypes = repelem(["int32"], length(varnames));
+vartypes = repelem(["int32"], length(varnames)); % repeat element
 % create a new table for labels
 mdvar_combs_label = table('Size', size(mdvar_combs),...
                           'VariableTypes', vartypes,...
@@ -28,7 +28,7 @@ varname_labels = cellfun(@(key) initial_dict(key), varnames);
 
 % creating labels
 % lower value is 0, high values: just keep adding 1 to the previous one
-% e.g., if only two values, [0,1]
+% e.g., if only two values, [0,1]; three values, [0,1,2]
 for i = 1:length(varnames)
     col_data = mdvar_combs.(varnames{i});
     col_data_uniq = unique(col_data);
@@ -48,7 +48,7 @@ labels = row_interleave(:)';
 % now labels is a long string, we need to use regular expression to split
 labels = regexp(labels, sprintf('\\w{1,%d}', N_var*2), 'match');
 
-%% Create geometries
+%% CREATE THE GEOMETRY !!!!!!!!!!!!!!
 for i = 1:N_mds
     label = labels(i);
     label = label{:};
@@ -712,7 +712,7 @@ function fx_gen_syn_geom(var_table, sens_run)
     attrs_table.('author') = 'Donglai Yang';
     attrs_table.('creation_date') = string(datetime('today'));
     %% Additional notes
-    notes = 'In the sliding law specification, 0 represents hard bed and 1 represents soft bed';
+    notes = 'sliding law represents the p number in Paterson sliding law. p=1 is linear; p=3 is nonlinear. Label 0 represents p=1; label 1 represents p=3';
     
     %% Save the geometry as a structure
     syn.X = X;
@@ -733,7 +733,7 @@ function fx_gen_syn_geom(var_table, sens_run)
     syn.SMB_cons = SMB_cons;
     syn.rheoB = rheoB;
     syn.transient_rheoB = transient_rheoB;
-    syn.slidinglaw = slidinglaw;
+    syn.slidingP = slidinglaw;
     syn.label = label;
     syn.attrs_table = attrs_table;
     syn.notes = notes;

@@ -1,10 +1,11 @@
 %% Model name and parameter
-index = 00;
+index = 'f1g1l1b1';
 type  = 'spinup';
-load('spinup_md/spinup_md_00.mat')
+% load('spinup_md/spinup_md_00.mat')
+md = md.model_f1g1l1b1_spinup;
 
 % Start
-name = [num2str(index), '_', type];
+name = [index, '_', type];
 fullname = ['model_',name];
 nt = md.timestepping.final_time/md.timestepping.time_step;
 
@@ -38,7 +39,7 @@ subplot(1,2,2); plot(1:nt, above_vol);
 
 %% Visualize thickness along the thalweg
 % inquire X,Y
-[geometry, ~] = query_data(num2str(index), type);
+[geometry, ~] = query_data(index, type);
 syn = testbed_data(geometry{1});
 X = syn.X;
 Y = syn.Y;
@@ -55,8 +56,8 @@ thalweg_h_mean_line = [];
 for i = selected
     subplot(1,2,1)
     thalweg_h_grid = InterpFromMeshToGrid(md.mesh.elements, md.mesh.x, md.mesh.y,...
-                                        md.results.TransientSolution(i).Surface,...
-                                        x, y);
+                                          md.results.TransientSolution(i).Surface,...
+                                          syn.x, syn.y, NaN);
     thalweg_h_line = thalweg_h_grid(mid_i,:);
     plot(thalweg_x, thalweg_h_line)
     thalweg_h_mean_line = [thalweg_h_mean_line; mean(thalweg_h_line,'all')];
@@ -95,7 +96,7 @@ thalweg_sample_ht = thalweg_sample_ht./thalweg_sample_ht(1,:);
 plot(selected, thalweg_sample_ht)
 
 %% Animate change in lateral profile
-[geometry, ~] = query_data(num2str(index), type);
+[geometry, ~] = query_data(index, type);
 syn = testbed_data(geometry{1});
 if rem(size(syn.X,1), 2) == 0
     mid_i = size(syn.X,1)/2;
@@ -110,7 +111,7 @@ for i = selected
     thalweg_h_grid = InterpFromMeshToGrid(md.mesh.elements,md.mesh.x, md.mesh.y,...
                                         md.results.TransientSolution(i).Surface,...
                                         syn.x, syn.y, 0);
-    thalweg_base_grid = InterpFromMeshToGrid(md.mesh.elements,md.mesh.x, md.mesh.y,...
+    thalweg_base_grid = InterpFromMeshToGrid(md.mesh.elements, md.mesh.x, md.mesh.y,...
                                         md.results.TransientSolution(i).Surface - md.results.TransientSolution(i).Thickness,...
                                         syn.x, syn.y, 0);
     thalweg_h_line = thalweg_h_grid(mid_i,:);

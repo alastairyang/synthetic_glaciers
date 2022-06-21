@@ -57,17 +57,100 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
 
 
         %ploting
-        plotmodel(md,'data','mesh', ...
+        plotmodel(md,'data','mesh', 'title','mesh',...
                      'data',md.mask.ocean_levelset,'title','grounded/floating',...
                      'data',md.mask.ice_levelset,'title','ice/no-ice')
 
-    %Parameterization #3
-        ParamFile = ['parameters/syn_',model_index,'_',model_type, '.par'];
-        md = parameterize(md, ParamFile);
+    %%  Parameterization #3
+%         ParamFile = ['parameters/syn_',model_index,'_',model_type, '.par'];
+%         md = parameterize(md, ParamFile);
+        disp('   Loading geometry data');
+        [geometry, velocity] = query_data(model_index,'spinup');
+        geometry_path = geometry{1};
+        velocity_path = velocity{1};
+        syn = testbed_data(geometry_path);
+        md.geometry.surface = InterpFromGridToMesh(syn.x', syn.y, syn.s, md.mesh.x, md.mesh.y, 0);
+        md.geometry.bed  = InterpFromGridToMesh(syn.x', syn.y, syn.bed,  md.mesh.x, md.mesh.y, 0);
+        md.geometry.base = md.geometry.bed; % we will change this later, the part where ice is floating
+        md.geometry.thickness = md.geometry.surface - md.geometry.base;
 
-        %Extrusion #?
-        % only 5 layers exponent 1
-        %md = extrude(md, n_layer, exponent);
+        %Get the node numbers of floating nodes
+        pos=find(md.mask.ocean_levelset<0); 
+
+        %apply a flotation criterion on the precedingly defined nodes and
+        %redefine base and thickness accordingly
+        %ensure hydrostatic equilibrium on ice shelf: 
+        di=md.materials.rho_ice/md.materials.rho_water;
+        md.geometry.thickness(pos)=1/(1-di)*md.geometry.surface(pos);
+        md.geometry.base(pos)=md.geometry.surface(pos)-md.geometry.thickness(pos);
+
+        disp('   Constructing thickness related variables');
+        pos0=find(md.geometry.thickness<=1);
+        md.geometry.thickness(pos0)=1;
+        md.geometry.surface=md.geometry.thickness+md.geometry.base;
+        md.geometry.hydrostatic_ratio=ones(md.mesh.numberofvertices,1);
+
+
+        disp('   Defining friction parameters');
+        fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.fric_coef,...
+                                              md.mesh.x, md.mesh.y, 0);
+        md.friction.coefficient=fric_coef_mesh;
+        %one friciton exponent (p,q) per element
+        md.friction.p=syn.slidingP*ones(md.mesh.numberofelements,1);
+        md.friction.q=ones(md.mesh.numberofelements,1);
+
+        %no friction applied on floating ice
+        pos=find(md.mask.ocean_levelset<0);
+        md.friction.coefficient(pos)=0;
+        md.groundingline.migration='SubelementMigration';
+
+        disp('   Construct ice rheological properties');
+
+        % %The rheology parameters sit in the material section #md.materials
+        % %B has one value per vertex
+        % md.materials.rheology_B=6.8067e7*ones(md.mesh.numberofvertices,1);
+        %n has one value per element
+        %->
+        md.materials.rheology_n=3*ones(md.mesh.numberofelements,1);
+
+        disp('   Set boundary conditions');
+
+        %Set the default boundary conditions for an ice-sheet 
+        % #help SetIceSheetBC
+        md=SetMarineIceSheetBC(md);
+
+        % Initializing: pressure, velocity field
+        load(velocity_path) % loaded as 'V'
+        md.initialization.pressure=md.materials.rho_ice*md.constants.g*md.geometry.thickness;
+        vx_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vx, md.mesh.x, md.mesh.y, 0);
+        vy_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vy, md.mesh.x, md.mesh.y, 0);
+        vz_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vz, md.mesh.x, md.mesh.y, 0);
+        md.initialization.vx=vx_mesh;
+        md.initialization.vy=vy_mesh;
+        md.initialization.vz=vz_mesh;
+        md.initialization.vel=sqrt(md.initialization.vx.^2+...
+                                   md.initialization.vy.^2+...
+                                   md.initialization.vz.^2);
+
+        disp('   Fixing thickness at inflow boundary for spin-up run');
+        % Set Dirichlet B.C of thickness at inflow boundary
+        % first get vertex on ice front (borrowed from SetMarineIceSheet)
+        % then subtract
+        pos = find(sum(md.mask.ocean_levelset(md.mesh.elements)<0.,2) >0.);
+        vertexonfloatingice = zeros(md.mesh.numberofvertices,1);
+        vertexonfloatingice(md.mesh.elements(pos,:)) = 1.;
+        vertexonicefront = double(md.mesh.vertexonboundary & vertexonfloatingice);
+        vertexnoticefront = md.mesh.vertexonboundary - vertexonicefront;
+        noticefront_i  = find(vertexnoticefront == 1);
+        md.masstransport.spcthickness(noticefront_i) = md.geometry.thickness(noticefront_i);
+        
+        disp('    Initiate levelset')
+        icepresence=double(InterpFromGridToMesh(syn.x',syn.y,syn.ice_mask, md.mesh.x,md.mesh.y,0));
+        md.levelset.spclevelset = icepresence;
+        icefront_i = find(vertexonicefront == 1);
+        md.levelset.spclevelset(icefront_i) = 0; % ice front needs to be zero
+
+    %%  Processes
         
         % rheology - B: data{1} should be uniform B, no shear margin
         % weakening. See it is using the first cell (no weakening)
@@ -112,12 +195,78 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
         
 %%%%%%%%%
     elseif strcmp(model_type, 't') % If this is a transient run with time-dependent climate forcing
-        load(model_path)
+        load(model_path) % the variable is md
         
+        %% Parameterize
         % This .par substitutes much of the final state of the spin-up run
         % to the initial conditions of this transient run
-        ParamFile = ['parameters/syn_',model_index,'_',model_type, '.par'];
-        md = parameterize(md, ParamFile);
+%         ParamFile = ['parameters/syn_',model_index,'_',model_type, '.par'];
+%         md = parameterize(md, ParamFile);
+        disp('   Acquire data');
+        [geometry, ~] = query_data(model_index,'spinup');
+        geometry_path = geometry{1};
+        disp('   Substitute the geometry')
+        surface  = md.results.TransientSolution(end).Surface;
+        base     = md.results.TransientSolution(end).Base;
+        thickness = surface - base;
+
+        md.geometry.surface   = surface;
+        md.geometry.base      = base;
+        md.geometry.thickness = thickness;
+        % no changes to md.geometry.bed
+        % substitute the mask and redefine 0 friction
+        md.mask.ocean_levelset = md.results.TransientSolution(end).MaskOceanLevelset;
+
+        disp('    Min ice thickness is 1 meter!')
+        pos0=find(md.geometry.thickness<=1);
+        md.geometry.thickness(pos0)=1;
+        md.geometry.surface=md.geometry.thickness+md.geometry.base;
+
+        disp('    Substitute friciton coefficent')
+        syn = testbed_data(geometry_path);
+        fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.fric_coef, md.mesh.x, md.mesh.y, 0);
+        md.friction.coefficient = fric_coef_mesh;
+        pos = find(md.mask.ocean_levelset<0);
+        md.friction.coefficient(pos) = 0;
+
+        disp('    Substitute the initial velocity distribution')
+        % get the velocity from results and put it into initialization
+        Vel = md.results.TransientSolution(end).Vel;
+        Vx  = md.results.TransientSolution(end).Vx;
+        Vy  = md.results.TransientSolution(end).Vy;
+        try % if SSA, there is no vz, then just 0 all
+            Vz  = md.results.TransientSolution(end).Vz;
+        catch
+            Vz  = zeros(size(Vy));
+        end
+        md.initialization.vx  = Vx;
+        md.initialization.vy  = Vy;
+        md.initialization.vz  = Vz;
+        md.initialization.vel = Vel;
+
+        disp('   Constructing boundary conditions')
+        % clear the spcthickness condition
+        md.masstransport.spcthickness = NaN*ones(size(md.geometry.thickness));
+
+        % Vertex on ice front (borrowed from SetMarineIceSheet)
+        pos = find(sum(md.mask.ocean_levelset(md.mesh.elements)<0.,2) >0.);
+        vertexonfloatingice = zeros(md.mesh.numberofvertices,1);
+        vertexonfloatingice(md.mesh.elements(pos,:)) = 1.;
+        vertexonicefront = double(md.mesh.vertexonboundary & vertexonfloatingice);
+        vertexnoticefront = md.mesh.vertexonboundary - vertexonicefront;
+        % Get the thickness and fix the thickness there
+        fixh_i = find(vertexnoticefront == 1);
+        md.masstransport.spcthickness(fixh_i) = md.geometry.thickness(fixh_i);
+
+        disp('    Initialize levelset')
+        md.levelset.spclevelset = md.results.TransientSolution(end).MaskIceLevelset;
+        icefront_i = find(vertexonicefront == 1);
+        md.levelset.spclevelset(icefront_i) = 0; % ice front needs to be zero
+
+        %% Load forcing
+        disp('    Done importing the spinup model info; clear the field')
+        % clear the solution field
+        md.results = rmfield(md.results, 'TransientSolution');
         
         % get data
         syn = testbed_data(geometry_path);
@@ -271,6 +420,7 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
     md.transient.requested_outputs={'default','IceVolume','IceVolumeAboveFloatation'};
 
     md.cluster=generic('name',oshostname(),'np',n_process);
+    md.miscellaneous.name = 'transient';
 	md=solve(md,'Transient');
 
 % output

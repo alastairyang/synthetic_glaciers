@@ -9,7 +9,7 @@
 % [low, high]
 fjord_width = [2400, 12000]; % meter, fjord width
 gl_depth = [100, 600]; % meter, grouning line depth
-bs_law = [0, 1]; % 0 represents soft bed, 1 represents hard bed. This one has nothing to change
+bs_law = [1, 3]; % p number in the Paterson sliding law, 1 is linear, 3 is nonlinear
 bg_friccoef = [20, 200]; % (unit?), background basal friction level
 
 var_names = ["fjord_width","groundingline_depth","basalfric_law","background_friccoef"];
