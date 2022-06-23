@@ -402,8 +402,8 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
     
     md.transient.ismasstransport=1;
 	md.transient.isstressbalance=1;
+    md.transient.ismovingfront=1;
     md.transient.isgroundingline=1;
-	md.transient.ismovingfront=1; % enable levelset method
 	md.transient.isthermal=0;
 	md.verbose.solution=1;
     md.timestepping.start_time = 0;

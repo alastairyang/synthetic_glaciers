@@ -1,8 +1,8 @@
 %% Model name and parameter
-index = 'f1g1l1b1';
+index = 'f0g0l0b0';
 type  = 'spinup';
 % load('spinup_md/spinup_md_00.mat')
-md = md.model_f1g1l1b1_spinup;
+md = md.model_f0g0l0b0_spinup;
 
 % Start
 name = [index, '_', type];
@@ -110,10 +110,10 @@ selected = 1:floor(nt*0.05):nt;
 for i = selected
     thalweg_h_grid = InterpFromMeshToGrid(md.mesh.elements,md.mesh.x, md.mesh.y,...
                                         md.results.TransientSolution(i).Surface,...
-                                        syn.x, syn.y, 0);
+                                        syn.x, syn.y, NaN);
     thalweg_base_grid = InterpFromMeshToGrid(md.mesh.elements, md.mesh.x, md.mesh.y,...
                                         md.results.TransientSolution(i).Surface - md.results.TransientSolution(i).Thickness,...
-                                        syn.x, syn.y, 0);
+                                        syn.x, syn.y, NaN);
     thalweg_h_line = thalweg_h_grid(mid_i,:);
     thalweg_base_line = thalweg_base_grid(mid_i,:);
     thalweg_both = [thalweg_h_line; thalweg_base_line];
