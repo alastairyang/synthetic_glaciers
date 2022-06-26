@@ -28,8 +28,13 @@ function [geo_filepath, v_filepath, md_filepath, sens_filepath] = query_data(mod
         % get the velocity file from spinup with fixed thickness
         v_filename = ['spinup_V_', model_index,'.mat'];
         v_filepath = get_absolute_path('git_research',v_filename);
-        md_filename = ['spinup_md_', model_index,'.mat'];
-        md_filepath = get_absolute_path('git_research',md_filename);
+        if to_disk % the spinup model is on the external disk
+            md_filename = ['spinup_md_', model_index,'.mat'];
+            md_filepath = ['/Volumes/Donglai_SSD/spinup_md/',md_filename];
+        else
+            md_filename = ['spinup_md_', model_index,'.mat'];
+            md_filepath = get_absolute_path('git_research',md_filename);
+        end
         sens_filepath = [];
     end
 

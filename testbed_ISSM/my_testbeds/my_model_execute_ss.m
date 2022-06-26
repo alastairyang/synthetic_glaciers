@@ -1,6 +1,8 @@
 function output = my_model_execute_ss(geometry_path, model_index, model_type)
 %%  This function excute the model without calling the parameter files
 %%  Model
+global to_disk
+%%
 %   As the parameter files will be called in by parameters
     md = model;
     % parse out params
@@ -21,7 +23,7 @@ function output = my_model_execute_ss(geometry_path, model_index, model_type)
     % Thi is modeled after JI example
     % triangle(model, domain_file, average_element_size_meter)
     syn = testbed_data(geometry_path);
-    [Xq,Yq,~] = meshgrid_downsample(syn.X, syn.Y, ones(size(syn.X))); % use ones as placeholder
+    [Xq,Yq,~] = meshgrid_downsample(syn.X, syn.Y, ones(size(syn.X)), model_type); % use ones as placeholder
     
     % generate Domain.exp file
     meshgrid2outline(Xq,Yq);

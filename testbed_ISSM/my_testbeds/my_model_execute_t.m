@@ -1,4 +1,6 @@
 function output = my_model_execute_t(geometry_path, velocity_path, model_path, model_index, model_type, forcing)
+%% get global variable(s)
+global to_disk
 %%  Model 
     tb = table();
     % the parameters() function is simply to store hyperparamters of
@@ -26,7 +28,7 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
         % Thi is modeled after JI example
         % triangle(model, domain_file, average_element_size_meter)
         syn = testbed_data(geometry_path);
-        [Xq,Yq,~] = meshgrid_downsample(syn.X, syn.Y, ones(size(syn.X))); % use ones as placeholder
+        [Xq,Yq,~] = meshgrid_downsample(syn.X, syn.Y, ones(size(syn.X)), model_type); % use ones as placeholder
 
         % generate Domain.exp file
         meshgrid2outline(Xq,Yq);
@@ -35,9 +37,8 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
 
         % Velocity field
         load(velocity_path); % loaded as 'V'
-        vel_mesh = InterpFromGridToMesh(syn.x',syn.y,V.vel, md.mesh.x,md.mesh.y,0);
-        % Speed
-        md = bamg(md,'hmin',200,'hmax',5000,'field',vel_mesh,'err',5);
+        vel_mesh = InterpFromGridToMesh(syn.x',syn.y,V.vel, md.mesh.x,md.mesh.y,mean(V.vel,'all'));
+        md = bamg(md,'hmin',200,'hmax',10000,'field',vel_mesh,'err',3);
         %md=triangle(md, 'Domain.exp');
         plotmodel(md, 'data','mesh')
 
@@ -58,8 +59,7 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
 
         %ploting
         plotmodel(md,'data','mesh', 'title','mesh',...
-                     'data',md.mask.ocean_levelset,'title','grounded/floating',...
-                     'data',md.mask.ice_levelset,'title','ice/no-ice')
+                     'data',md.mask.ocean_levelset,'title','grounded/floating')
 
     %%  Parameterization #3
 %         ParamFile = ['parameters/syn_',model_index,'_',model_type, '.par'];
@@ -154,11 +154,13 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
         
         % rheology - B: data{1} should be uniform B, no shear margin
         % weakening. See it is using the first cell (no weakening)
-        md.materials.rheology_B = double(InterpFromGridToMesh(syn.x',syn.y,syn.transient_rheoB.data{1},md.mesh.x,md.mesh.y,0));
+        md.materials.rheology_B = double(InterpFromGridToMesh(syn.x',syn.y,syn.transient_rheoB.data{1},...
+                                                              md.mesh.x,md.mesh.y, mean(syn.transient_rheoB.data{1},'all')));
 
         % friction coef
         % no perturbation (slippery patch)
-        md.friction.coefficient = double(InterpFromGridToMesh(syn.x',syn.y,syn.transient_fric_coef.data{1},md.mesh.x,md.mesh.y,0));
+        md.friction.coefficient = double(InterpFromGridToMesh(syn.x',syn.y,syn.transient_fric_coef.data{1},...
+                                                              md.mesh.x,md.mesh.y, mean(syn.transient_fric_coef.data{1},'all')));
         % no friction applied on floating ice; we did this before in .par
         % but a little redundancy does not hurt
         pos=find(md.mask.ocean_levelset<0);
@@ -431,8 +433,15 @@ function output = my_model_execute_t(geometry_path, velocity_path, model_path, m
      if strcmp(model_type, 'spinup')
 
         % save the model, md
-        md_file_path = ['spinup_md/spinup_md_', model_index];
+        if to_disk % global variable.
+            md_file_path = ['/Volumes/Donglai_SSD/spinup_md/spinup_md_', model_index];
+        else
+            md_file_path = ['spinup_md/spinup_md_', model_index];
+        end
         save(md_file_path, 'md');
+        % and save some plots to monitor if relaxation is completed
+        export_graph(md, model_index, model_type)
+        
      elseif strcmp(model_type, 't')
         foldername = ['syn_', model_index];
         md_file_path = ['results/', foldername, '/t_md_', model_index,'_', forcing];

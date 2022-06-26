@@ -73,6 +73,8 @@ plot(selected, thalweg_h_mean_line)
 syn = testbed_data(geometry{1});
 X = syn.X;
 Y = syn.Y;
+x = syn.x;
+y = syn.y;
 if rem(size(X,1), 2) == 0
     mid_i = size(X,1)/2;
 else
@@ -86,7 +88,7 @@ thalweg_sample_ht = [];
 for i = selected
     thalweg_h_grid = InterpFromMeshToGrid(md.mesh.elements, md.mesh.x, md.mesh.y,...
                                         md.results.TransientSolution(i).Surface,...
-                                        x, y);
+                                        x, y, NaN);
     thalweg_sample_h  = thalweg_h_grid(mid_i,sample_i);
     thalweg_sample_ht = [thalweg_sample_ht; thalweg_sample_h];
     

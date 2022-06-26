@@ -9,7 +9,7 @@ function output_model = run_models(model_index, model_type, forcing)
 %   Output:
 %       output_model[struc]: a structure storing the ISSM model outputs
     
-    model_name   = ['model_', num2str(model_index)];
+    model_name   = ['model_', model_index];
 
     if strcmp(model_type, 'spinup') % spin up
         % get the velocity and geometry file
