@@ -9,13 +9,16 @@ function params = parameters(input)
         n_layer = 3;
         n_process = 3;
         exponent = 1;
-        dt = 0.1; % 
-        nt_t = 1000; % transient run number of iterations
-        nt_spinup = 1000; % spinup run, number of iterations
+        sim_year_t = 100; % transient run number of iterations
+        sim_year_spinup = 100; % spinup run, number of iterations
         max_stress_grounded = 1000000.0; % 1 MPa
         max_stress_floating = 100000.0; % 100 kPa (0.1*max stress grounded)
+        % hmin and hmax for the anistropic meshing "bamg"
+        hmin = 500;
+        hmax = 10000;
 
-        params = table(n_layer, n_process, exponent, dt, nt_t, nt_spinup, max_stress_grounded, max_stress_floating);
+        params = table(n_layer, n_process, exponent, sim_year_t, sim_year_spinup, hmin, hmax,...
+                       max_stress_grounded, max_stress_floating);
 
         varnames = input.Properties.VariableNames;
         for i = 1:numel(varnames)

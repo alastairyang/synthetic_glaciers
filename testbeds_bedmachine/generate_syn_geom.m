@@ -11,7 +11,7 @@
 sens_run = 0; % no sensitivity run
 
 %% Read in model combination data and create labels
-mdvar_combs = readtable('md_var_combinations.csv');
+mdvar_combs = readtable('/Users/donglaiyang/Library/Mobile Documents/com~apple~CloudDocs/Documents/Documents_Alastair’s_MacBook_Pro/Buffalo/Research/git_research/testbeds_bedmachine/md_var_combinations.csv');
 N_var = size(mdvar_combs,2);
 N_mds = size(mdvar_combs,1);
 varnames = mdvar_combs.Properties.VariableNames;

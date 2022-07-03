@@ -9,11 +9,12 @@ global to_disk
     n_layer = params.n_layer;
     n_process = params.n_process;
     exponent = params.exponent;
-    dt = params.dt;
-    nt_t = params.nt_t;
-    nt_spinup = params.nt_spinup;
+    sim_year_t = params.sim_year_t;
+    sim_year_spinup = params.sim_year_spinup;
     max_stress_grounded = params.max_stress_grounded;
     max_stress_floating = params.max_stress_floating;
+    hmin = params.hmin;
+    hmax = params.hmax;
 
 %   If this is a spinup run, we set up model from scratch
     if strcmp(model_type, 'spinup')
@@ -38,7 +39,7 @@ global to_disk
         % Velocity field
         load(velocity_path); % loaded as 'V'
         vel_mesh = InterpFromGridToMesh(syn.x',syn.y,V.vel, md.mesh.x,md.mesh.y,mean(V.vel,'all'));
-        md = bamg(md,'hmin',200,'hmax',10000,'field',vel_mesh,'err',3);
+        md = bamg(md,'hmin',hmin,'hmax',hmax,'field',vel_mesh,'err',3);
         %md=triangle(md, 'Domain.exp');
         plotmodel(md, 'data','mesh')
 
@@ -409,13 +410,12 @@ global to_disk
 	md.transient.isthermal=0;
 	md.verbose.solution=1;
     md.timestepping.start_time = 0;
-    % md.timestepping.time_adapt = 1; % CFL conditon; don't know how to
-    % activate
-    md.timestepping.time_step = dt;
+    md.timestepping.time_step = CFL_condition(V, hmin, hmin);
+    print(['Time step is ', num2str(md.timestepping.time_step)])
     if strcmp(model_type, 'spinup')       
-        md.timestepping.final_time = nt_spinup*dt;
+        md.timestepping.final_time = sim_year_spinup;
     else % it is an actual transient run
-        md.timestepping.final_time = nt_t*dt;
+        md.timestepping.final_time = sim_year_t;
     end
     
     % Request output

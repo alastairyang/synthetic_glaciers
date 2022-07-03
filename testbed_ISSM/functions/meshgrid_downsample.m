@@ -35,8 +35,8 @@ function [Xq, Yq, Zq] = meshgrid_downsample(X, Y, Z, model_type)
         p = 0.2;
         disp('    The meshgrid is downscaled to 20%')
     elseif strcmp(model_type, 'spinup')
-        p = 0.1;
-        disp('    The meshgrid is downscaled to 10%')
+        p = 0.30;
+        disp('    The meshgrid is downscaled to 30%')
     end
     nx = floor(size(X,2)*p);
     ny = floor(size(X,1)*p);

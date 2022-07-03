@@ -30,4 +30,4 @@ d = [A1,B1,C1, D1];
 
 % add to the table
 model_vars{:,:} = d;
-writetable(model_vars, 'md_var_combinations.csv')
+writetable(model_vars, '/Users/donglaiyang/Library/Mobile Documents/com~apple~CloudDocs/Documents/Documents_Alastair’s_MacBook_Pro/Buffalo/Research/git_research/testbeds_bedmachine/md_var_combinations.csv')
