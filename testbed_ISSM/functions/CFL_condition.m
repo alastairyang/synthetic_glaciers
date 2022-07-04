@@ -9,7 +9,7 @@ function dt = CFL_condition(vel_fields, dx_min, dy_min)
 %       dy_min: double, the min dy from the "bamg" meshgrid
 
     % parameter: Courant number
-    Cmax = 0.9;
+    Cmax = 0.6;
     
     % velocities
     % since we are using SSA, only x and y components

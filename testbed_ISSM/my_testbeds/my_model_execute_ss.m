@@ -18,7 +18,9 @@ global to_disk
     n_layer = params.n_layer;
     n_process = params.n_process;
     exponent = params.exponent;
+    f = params.f; % the f in Coulomb friction law
 	
+    %%
     % we use triangle method to create mesh
     % Thi is modeled after JI example
     % triangle(model, domain_file, average_element_size_meter)
@@ -71,17 +73,31 @@ global to_disk
     md.geometry.thickness(pos0)=1;
     md.geometry.surface=md.geometry.thickness+md.geometry.base;
 
+    
+    disp('   Set boundary conditions');
+    md=SetMarineIceSheetBC(md);
+
+    %% Extrusion #?
+	% only 5 layers exponent 1
+	md = extrude(md, n_layer, exponent);
+
     disp('   Defining friction parameters');
     fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.fric_coef,...
                                           md.mesh.x, md.mesh.y, 0);
-    md.friction.coefficient=fric_coef_mesh;
-    %one friciton exponent (p,q) per element
-    md.friction.p=syn.slidingP*ones(md.mesh.numberofelements,1);
-    md.friction.q=ones(md.mesh.numberofelements,1);
+    md.friction = frictiontsai();
+    md.friction.C=fric_coef_mesh;
+    % the m in Weertman's/Tsai's laws is the same as p in Paterson's formulation
+    md.friction.m = (1/syn.slidingP)*ones(md.mesh.numberofelements, 1);
+    md.friction.f = f*ones(md.mesh.numberofelements, 1);
+    
+    % old code for default friction law
+%     md.friction.coefficient=fric_coef_mesh;
+%     md.friction.p=syn.slidingP*ones(md.mesh.numberofelements,1);
+%     md.friction.q=ones(md.mesh.numberofelements,1);
 
     %no friction applied on floating ice
     pos=find(md.mask.ocean_levelset<0);
-    md.friction.coefficient(pos)=0;
+    md.friction.C(pos)=0.000000001;
     md.groundingline.migration='SubelementMigration';
 
     disp('   Construct ice rheological properties');
@@ -92,9 +108,9 @@ global to_disk
     %n has one value per element
     %->
     md.materials.rheology_n=3*ones(md.mesh.numberofelements,1);
-
-    disp('   Set boundary conditions');
-    md=SetMarineIceSheetBC(md);
+% 
+%     disp('   Set boundary conditions');
+%     md=SetMarineIceSheetBC(md);
 
 
     % Set Dirichlet B.C of thickness at inflow boundary
@@ -115,10 +131,6 @@ global to_disk
     %B has one value per vertex
     md.materials.rheology_B = double(InterpFromGridToMesh(syn.x',syn.y,syn.rheoB.rheoB_unif,md.mesh.x,md.mesh.y,0));
     
-    %% Extrusion #?
-	% only 5 layers exponent 1
-	md = extrude(md, n_layer, exponent);
-
 %Set the flow computing method #5
 	md = setflowequation(md, 'HO', 'all');
     % before running the model, take a look at all boundary conditions

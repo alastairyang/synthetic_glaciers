@@ -11,6 +11,7 @@ global to_disk
     exponent = params.exponent;
     sim_year_t = params.sim_year_t;
     sim_year_spinup = params.sim_year_spinup;
+    nt_spinup = params.nt_spinup;
     max_stress_grounded = params.max_stress_grounded;
     max_stress_floating = params.max_stress_floating;
     hmin = params.hmin;
@@ -95,14 +96,16 @@ global to_disk
         disp('   Defining friction parameters');
         fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.fric_coef,...
                                               md.mesh.x, md.mesh.y, 0);
-        md.friction.coefficient=fric_coef_mesh;
-        %one friciton exponent (p,q) per element
-        md.friction.p=syn.slidingP*ones(md.mesh.numberofelements,1);
-        md.friction.q=ones(md.mesh.numberofelements,1);
-
+        md.friction = frictiontsai();
+        md.friction.C=fric_coef_mesh;
+        % the m in Weertman's/Tsai's laws is the inverse of p in Paterson's formulation
+        % md.friction.m = syn.slidingP*ones(md.mesh.numberofelements,1);
+        md.friction.m = (1/syn.slidingP)*ones(md.mesh.numberofelements, 1);
+        md.friction.f = f*ones(md.mesh.numberofelements, 1);
+        
         %no friction applied on floating ice
         pos=find(md.mask.ocean_levelset<0);
-        md.friction.coefficient(pos)=0;
+        md.friction.C(pos)=0.0000000001;
         md.groundingline.migration='SubelementMigration';
 
         disp('   Construct ice rheological properties');
@@ -160,12 +163,12 @@ global to_disk
 
         % friction coef
         % no perturbation (slippery patch)
-        md.friction.coefficient = double(InterpFromGridToMesh(syn.x',syn.y,syn.transient_fric_coef.data{1},...
+        md.friction.C = double(InterpFromGridToMesh(syn.x',syn.y,syn.transient_fric_coef.data{1},...
                                                               md.mesh.x,md.mesh.y, mean(syn.transient_fric_coef.data{1},'all')));
         % no friction applied on floating ice; we did this before in .par
         % but a little redundancy does not hurt
         pos=find(md.mask.ocean_levelset<0);
-        md.friction.coefficient(pos)=0;
+        md.friction.C(pos)=0.0000000001;
         
         % forcing: needs to be forced after extrusion for model consistency
         % Ice shelf basal melt: constant melt rate
@@ -228,9 +231,9 @@ global to_disk
         disp('    Substitute friciton coefficent')
         syn = testbed_data(geometry_path);
         fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.fric_coef, md.mesh.x, md.mesh.y, 0);
-        md.friction.coefficient = fric_coef_mesh;
+        md.friction.C = fric_coef_mesh;
         pos = find(md.mask.ocean_levelset<0);
-        md.friction.coefficient(pos) = 0;
+        md.friction.C(pos) = 0;
 
         disp('    Substitute the initial velocity distribution')
         % get the velocity from results and put it into initialization
@@ -296,9 +299,9 @@ global to_disk
                     fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.transient_fric_coef.data{i}, md.mesh.x, md.mesh.y, 0);
                     temp = [fric_coef_mesh; syn.transient_fric_coef.years{i}]; % vertical concat year
                     if i == 1
-                        md.friction.coefficient = temp;
+                        md.friction.C = temp;
                     else
-                        md.friction.coefficient = [md.friction.coefficient, temp];
+                        md.friction.C = [md.friction.C, temp];
                     end
                 end
 
@@ -323,9 +326,9 @@ global to_disk
                     fric_coef_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.transient_fric_coef.data{i}, md.mesh.x, md.mesh.y, 0);
                     temp = [fric_coef_mesh; syn.transient_fric_coef.years{i}]; % vertical concat year
                     if i == 1
-                        md.friction.coefficient = temp;
+                        md.friction.C = temp;
                     else
-                        md.friction.coefficient = [md.friction.coefficient, temp];
+                        md.friction.C = [md.friction.C, temp];
                     end
                 end
                 
@@ -410,10 +413,11 @@ global to_disk
 	md.transient.isthermal=0;
 	md.verbose.solution=1;
     md.timestepping.start_time = 0;
-    md.timestepping.time_step = CFL_condition(V, hmin, hmin);
-    print(['Time step is ', num2str(md.timestepping.time_step)])
+    % timestep, smaller one between 0.1 yr and dt from CFL condition
+    md.timestepping.time_step = min(CFL_condition(V, hmin, hmin), 0.1);
+    disp(['Time step is ', num2str(md.timestepping.time_step)])
     if strcmp(model_type, 'spinup')       
-        md.timestepping.final_time = sim_year_spinup;
+        md.timestepping.final_time =  md.timestepping.time_step*nt_spinup;
     else % it is an actual transient run
         md.timestepping.final_time = sim_year_t;
     end

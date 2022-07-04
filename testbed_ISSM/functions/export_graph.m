@@ -80,8 +80,5 @@ function  export_graph(md, model_index, model_type)
     saveas(f, [figsave_path, name,'.png']);
 
     
-    
-
-    
 end
 
