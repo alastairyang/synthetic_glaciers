@@ -7,10 +7,10 @@
 
 %% Specify low level and high level
 % [low, high]
-fjord_width = [1200, 3600, 6000]; % meter, half fjord width
-gl_depth = [100, 350, 600]; % meter, grouning line depth
+fjord_width = [1200, 3600, 7200]; % meter, half fjord width
+gl_depth = [100, 250, 500]; % meter, grouning line depth
 bs_law = [1, 3]; % p number in the Paterson sliding law, 1 is linear, 3 is nonlinear
-bg_friccoef = [2500, 5000, 10000]; % (unit?), background basal friction level
+bg_friccoef = [1e9, 1e10, 1e11]; % (unit?), background basal friction level
 
 var_names = ["fjord_width","groundingline_depth","basalfric_law","background_friccoef"];
 

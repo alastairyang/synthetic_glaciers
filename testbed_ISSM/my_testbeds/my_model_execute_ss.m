@@ -90,17 +90,17 @@ global to_disk
     md.friction.m = (1/syn.slidingP)*ones(md.mesh.numberofelements, 1);
     md.friction.f = f*ones(md.mesh.numberofelements, 1);
     
-    % old code for default friction law
-%     md.friction.coefficient=fric_coef_mesh;
+%     % old code for default friction law
+%     md.friction.coefficient=200*ones(size(fric_coef_mesh));
 %     md.friction.p=syn.slidingP*ones(md.mesh.numberofelements,1);
 %     md.friction.q=ones(md.mesh.numberofelements,1);
 
     %no friction applied on floating ice
     pos=find(md.mask.ocean_levelset<0);
-    md.friction.C(pos)=0.000000001;
+    md.friction.C(pos)=0.0000000001;
     md.groundingline.migration='SubelementMigration';
-
-    disp('   Construct ice rheological properties');
+% 
+%     disp('   Construct ice rheological properties');
 
     % %The rheology parameters sit in the material section #md.materials
     % %B has one value per vertex
@@ -140,7 +140,7 @@ global to_disk
 	md.cluster=generic('name',oshostname(),'np',n_process);
 	md.verbose=verbose('convergence',true);
     md.miscellaneous.name = 'steadystate';
-
+    md.steadystate.maxiter = 200; % 200 iterations allowed
 	md=solve(md,'Stressbalance');
 
 % output

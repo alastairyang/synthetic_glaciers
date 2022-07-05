@@ -16,6 +16,7 @@ global to_disk
     max_stress_floating = params.max_stress_floating;
     hmin = params.hmin;
     hmax = params.hmax;
+    f = params.f; % the f in Coulomb friction law
 
 %   If this is a spinup run, we set up model from scratch
     if strcmp(model_type, 'spinup')
