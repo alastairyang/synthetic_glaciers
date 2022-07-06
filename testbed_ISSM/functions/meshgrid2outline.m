@@ -10,7 +10,7 @@ function [] = meshgrid2outline(X, Y)
 %       Y: a meshgrid of Y
 %
 %   output:
-%       No functional output, but saves a text file.
+%       No functional output, but exports to a text file.
 %   
 %   We define the total number of sampled points to be (nx-1)*2 + (ny-1)*2
 
@@ -27,7 +27,7 @@ function [] = meshgrid2outline(X, Y)
     %%%%%%%
     % We keep the original vertices coordinates
     % bottom ind_X = 1 to N_x-1
-    bottom_x = X(1, 1:N_x-1); % X is homogenous along the first dim
+    bottom_x = X(1, 1:N_x-1);
     bottom_y = Y(N_y, 1:N_x-1);
     bottom_xy = [bottom_x', bottom_y'];
     
@@ -52,7 +52,11 @@ function [] = meshgrid2outline(X, Y)
     % left side...
     left_y = Y(1:N_y, 1);
     left_x = X(1, 1)*ones(numel(left_y), 1);
-    left_xy = [left_x, left_y];
+    % we want the bottom X interval to be smaller/finer than other sides,
+    % because this is the front of the glacier.
+    left_x = interp1(1:length(left_x), left_x, 1:0.2:length(left_x)); % four times finer
+    left_y = interp1(1:length(left_y), left_y, 1:0.2:length(left_y));
+    left_xy = [left_x', left_y'];
     
     % append all arrays
     outline_coor = [bottom_xy; right_xy_flip; top_xy_flip; left_xy];

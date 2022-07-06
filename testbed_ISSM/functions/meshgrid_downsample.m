@@ -32,7 +32,7 @@ function [Xq, Yq, Zq] = meshgrid_downsample(X, Y, Z, model_type)
 %     sprintf('The dimension of the meshgrid: x = %d, y = %d', size(X,2), size(X,1))
 %     prompt = 'Downsample to what percent? In decimal. \n';
     if strcmp(model_type, 'ss')
-        p = 0.1;
+        p = 0.2;
         disp('    The meshgrid is downscaled to 5%')
     elseif strcmp(model_type, 'spinup')
         p = 0.1;
