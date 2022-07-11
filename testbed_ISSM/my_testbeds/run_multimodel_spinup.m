@@ -22,7 +22,7 @@ for i = 1:N_model
     disp(['Model ', model_label, ' is starting, ', progress_count])
     
     % first, run the steady-state model
-    run_models(model_label, 'ss',       []);
+    % run_models(model_label, 'ss',       []);
     % then, run the spinup
     run_models(model_label, model_type, [])
     

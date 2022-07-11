@@ -13,9 +13,9 @@ function output_model = run_models(model_index, model_type, forcing)
 
     if strcmp(model_type, 'spinup') % spin up
         % get the velocity and geometry file
-        [geometry, velocity, ~, ~] = query_data(model_index, model_type);
+        [geometry, ~, ~, ~] = query_data(model_index, model_type);
         % input to model
-        md_spinup = my_model_execute_t(geometry{1}, velocity{1}, [], model_index, model_type,[]);
+        md_spinup = my_model_execute_t(geometry{1}, [], [], model_index, model_type,[]);
         output_model.([model_name,'_spinup']) = md_spinup;
     end
     

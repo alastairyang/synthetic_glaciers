@@ -1,4 +1,4 @@
-function dt = CFL_condition(vel_fields, dx_min, dy_min)
+function dt = CFL_condition(vel, dx_min, dy_min)
 %CFL_CONDITION CFL condition. We use the two components of velocity field
 %from steady-state simulation results to calculate the delta t (time-step)
 %from CFL condtion, assuming a Courant number.
@@ -13,8 +13,8 @@ function dt = CFL_condition(vel_fields, dx_min, dy_min)
     
     % velocities
     % since we are using SSA, only x and y components
-    vx_max = max(vel_fields.vx, [], 'all');
-    vy_max = max(vel_fields.vy, [], 'all');
+    vx_max = max(vel, [], 'all');
+    vy_max = 0;
     % CFL condition on two dimensions
     dt = Cmax/(vx_max/dx_min + vy_max/dy_min);
     

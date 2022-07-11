@@ -76,6 +76,7 @@ function fx_gen_syn_geom(var_table, sens_run)
     %% Main script
     % define parameters
     % Geometry parameters
+    Ug = 200; % grounding line initial velocity
     max_len = 400.0; % cutoff distance of flowline, in km
     n = 150; % sine wave sampling points
     ap_coef = 0.05; % filler wave amplitude
@@ -424,6 +425,7 @@ function fx_gen_syn_geom(var_table, sens_run)
     % absent:  positive or 1
     ice_mask = -1.*ones(size(syn_h));
     ice_mask(syn_h == 0) = 1;
+    
 
     %% Create ice shelf basal melting profile
     % % We approximate as a linear function of depth, where melt rate is higher
@@ -709,6 +711,7 @@ function fx_gen_syn_geom(var_table, sens_run)
     attrs_table.('parabolicprofile_bed_strength') = bed_shearstress;
     attrs_table.('total_length') = tot_length;
     attrs_table.('default_rheoB') = shear_B;
+    attrs_table.('grounding line velocity') = Ug;
     attrs_table.('author') = 'Donglai Yang';
     attrs_table.('creation_date') = string(datetime('today'));
     %% Additional notes
@@ -738,6 +741,13 @@ function fx_gen_syn_geom(var_table, sens_run)
     syn.attrs_table = attrs_table;
     syn.notes = notes;
     
+    
+    %% Create initial velocity from continuity and prescribed geometry
+    % we only care about along flow velocity at this point
+    vel_init = initial_vel(Ug, syn);
+    syn.vel_init_x = vel_init; 
+    
+    %% Save
     savepath = ['Synthetic glaciers/newlabels/geom_', label,'.mat'];
     save(savepath,'syn')
     disp(['Geometry ', label,' has been sucessfully created!! :) '])

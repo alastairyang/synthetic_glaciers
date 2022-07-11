@@ -36,12 +36,14 @@ global to_disk
         % generate Domain.exp file
         meshgrid2outline(Xq,Yq);
         % get a preliminary mesh which we will refine later
-        md = bamg(md,'domain', 'Domain.exp', 'hmax', 3000);
+        md = bamg(md,'domain', 'Domain.exp', 'hmax', 200);
 
         % Velocity field
-        load(velocity_path); % loaded as 'V'
-        vel_mesh = InterpFromGridToMesh(syn.x',syn.y,V.vel, md.mesh.x,md.mesh.y,mean(V.vel,'all'));
-        md = bamg(md,'hmin',hmin,'hmax',hmax,'field',vel_mesh,'err',3);
+        % load(velocity_path); % loaded as 'V'
+        vel_mesh = InterpFromGridToMesh(syn.x',syn.y, syn.vel_init_x,...
+                                        md.mesh.x,md.mesh.y, mean(syn.vel_init_x,'all'));
+        vel_mesh_norm = normalize(vel_mesh) + min(normalize(vel_mesh), [], 'all');
+        md = bamg(md,'hmin',hmin,'hmax',hmax,'field',vel_mesh_norm,'err',5);
         %md=triangle(md, 'Domain.exp');
         plotmodel(md, 'data','mesh')
 
@@ -68,9 +70,9 @@ global to_disk
 %         ParamFile = ['parameters/syn_',model_index,'_',model_type, '.par'];
 %         md = parameterize(md, ParamFile);
         disp('   Loading geometry data');
-        [geometry, velocity] = query_data(model_index,'spinup');
+        [geometry, ~] = query_data(model_index,'spinup');
         geometry_path = geometry{1};
-        velocity_path = velocity{1};
+        % velocity_path = velocity{1};
         syn = testbed_data(geometry_path);
         md.geometry.surface = InterpFromGridToMesh(syn.x', syn.y, syn.s, md.mesh.x, md.mesh.y, 0);
         md.geometry.bed  = InterpFromGridToMesh(syn.x', syn.y, syn.bed,  md.mesh.x, md.mesh.y, 0);
@@ -125,11 +127,14 @@ global to_disk
         md=SetMarineIceSheetBC(md);
 
         % Initializing: pressure, velocity field
-        load(velocity_path) % loaded as 'V'
-        md.initialization.pressure=md.materials.rho_ice*md.constants.g*md.geometry.thickness;
-        vx_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vx, md.mesh.x, md.mesh.y, 0);
-        vy_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vy, md.mesh.x, md.mesh.y, 0);
-        vz_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vz, md.mesh.x, md.mesh.y, 0);
+%         load(velocity_path) % loaded as 'V'
+%         md.initialization.pressure=md.materials.rho_ice*md.constants.g*md.geometry.thickness;
+%         vx_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vx, md.mesh.x, md.mesh.y, 0);
+%         vy_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vy, md.mesh.x, md.mesh.y, 0);
+%         vz_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vz, md.mesh.x, md.mesh.y, 0);
+        vx_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.vel_init_x, md.mesh.x, md.mesh.y, 0);
+        vy_mesh = zeros(size(vx_mesh));
+        vz_mesh = zeros(size(vx_mesh));
         md.initialization.vx=vx_mesh;
         md.initialization.vy=vy_mesh;
         md.initialization.vz=vz_mesh;
@@ -415,7 +420,7 @@ global to_disk
 	md.verbose.solution=1;
     md.timestepping.start_time = 0;
     % timestep, smaller one between 0.1 yr and dt from CFL condition
-    md.timestepping.time_step = min(CFL_condition(V, hmin, hmin), 0.1);
+    md.timestepping.time_step = min(CFL_condition(syn.vel_init_x, hmin, hmin), 0.1);
     disp(['Time step is ', num2str(md.timestepping.time_step)])
     if strcmp(model_type, 'spinup')       
         md.timestepping.final_time =  md.timestepping.time_step*nt_spinup;
