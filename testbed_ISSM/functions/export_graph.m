@@ -15,7 +15,7 @@ function  export_graph(md, model_index, model_type)
         model_index = convertStringsToChars(model_type);
     end
     name = ['model_',model_index, '_', model_type];
-    nt = md.timestepping.final_time/md.timestepping.time_step;
+    nt = size(md.results.TransientSolution,2);
     
     % make plots:
     %       plot 1: the timeseries of mean ice thickness (to monitor if the

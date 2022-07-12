@@ -36,14 +36,16 @@ global to_disk
         % generate Domain.exp file
         meshgrid2outline(Xq,Yq);
         % get a preliminary mesh which we will refine later
-        md = bamg(md,'domain', 'Domain.exp', 'hmax', 200);
+        md = bamg(md,'domain', 'Domain.exp', 'hmax', 1000);
 
         % Velocity field
         % load(velocity_path); % loaded as 'V'
-        vel_mesh = InterpFromGridToMesh(syn.x',syn.y, syn.vel_init_x,...
-                                        md.mesh.x,md.mesh.y, mean(syn.vel_init_x,'all'));
-        vel_mesh_norm = normalize(vel_mesh) + min(normalize(vel_mesh), [], 'all');
-        md = bamg(md,'hmin',hmin,'hmax',hmax,'field',vel_mesh_norm,'err',5);
+%         meshadapt_field = repmat(300*exp(-1/10000.*syn.x), size(syn.s,1), 1);
+%         
+%         vel_mesh = InterpFromGridToMesh(syn.x',syn.y, meshadapt_field,...
+%                                          md.mesh.x,md.mesh.y, mean(meshadapt_field,'all'));
+%         %vel_mesh_norm = normalize(vel_mesh) + min(normalize(vel_mesh), [], 'all');
+%         md = bamg(md,'hmin',200,'hmax',hmax,'field',vel_mesh);
         %md=triangle(md, 'Domain.exp');
         plotmodel(md, 'data','mesh')
 
@@ -418,12 +420,13 @@ global to_disk
     md.transient.isgroundingline=1;
 	md.transient.isthermal=0;
 	md.verbose.solution=1;
+    md.timestepping=timesteppingadaptive();
     md.timestepping.start_time = 0;
     % timestep, smaller one between 0.1 yr and dt from CFL condition
-    md.timestepping.time_step = min(CFL_condition(syn.vel_init_x, hmin, hmin), 0.1);
-    disp(['Time step is ', num2str(md.timestepping.time_step)])
+    %md.timestepping.time_step = min(CFL_condition(syn.vel_init_x, hmin, hmin), 0.1);
+    %disp(['Time step is ', num2str(md.timestepping.time_step)])
     if strcmp(model_type, 'spinup')       
-        md.timestepping.final_time =  md.timestepping.time_step*nt_spinup;
+        md.timestepping.final_time =  50;
     else % it is an actual transient run
         md.timestepping.final_time = sim_year_t;
     end

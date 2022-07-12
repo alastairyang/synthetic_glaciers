@@ -12,7 +12,7 @@ function vel_init = initial_vel(Ug, syn)
     %% define parameters
     dx = 150; % m, dx and dy
     dy = dx;
-    x_u0_limit = 40000; % m, 10 km before vx drops to zeros (wee need to cap it)
+    x_u0_limit = 20000; % m, 10 km before vx drops to zeros (wee need to cap it)
 
     %% Velocity along the center flowline on the ice shelf
     % Using continuity. A side note that there is analytical solution to ice
