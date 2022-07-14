@@ -90,8 +90,7 @@ global to_disk
         di=md.materials.rho_ice/md.materials.rho_water;
         md.geometry.thickness(pos)=1/(1-di)*md.geometry.surface(pos);
         md.geometry.base(pos)=md.geometry.surface(pos)-md.geometry.thickness(pos);
-
-        disp('   Constructing thickness related variables');
+        disp('   Make min thickness 1 meter');
         pos0=find(md.geometry.thickness<=1);
         md.geometry.thickness(pos0)=1;
         md.geometry.surface=md.geometry.thickness+md.geometry.base;
@@ -121,19 +120,20 @@ global to_disk
         %n has one value per element
         %->
         md.materials.rheology_n=3*ones(md.mesh.numberofelements,1);
-
+    
         disp('   Set boundary conditions');
 
         %Set the default boundary conditions for an ice-sheet 
         % #help SetIceSheetBC
-        md=SetMarineIceSheetBC(md);
+        %md=SetMarineIceSheetBC(md);
 
         % Initializing: pressure, velocity field
 %         load(velocity_path) % loaded as 'V'
-%         md.initialization.pressure=md.materials.rho_ice*md.constants.g*md.geometry.thickness;
 %         vx_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vx, md.mesh.x, md.mesh.y, 0);
 %         vy_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vy, md.mesh.x, md.mesh.y, 0);
 %         vz_mesh = InterpFromGridToMesh(syn.x', syn.y, V.vz, md.mesh.x, md.mesh.y, 0);
+        disp('    Initialization');
+        md.initialization.pressure=md.materials.rho_ice*md.constants.g*md.geometry.thickness;
         vx_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.vel_init_x, md.mesh.x, md.mesh.y, 0);
         vy_mesh = zeros(size(vx_mesh));
         vz_mesh = zeros(size(vx_mesh));
@@ -184,8 +184,8 @@ global to_disk
         shelf_melt_mesh = InterpFromGridToMesh(syn.x', syn.y, syn.shelf_melt.transient_melt{1}, md.mesh.x, md.mesh.y, 0);
         md.basalforcings.floatingice_melting_rate = shelf_melt_mesh;
         
-        % if using constant smb
-        %md.smb.mass_balance = InterpFromGridToMesh(x', y, SMB_cons, md.mesh.x, md.mesh.y, 0);
+        % Set boundary condition
+        md=SetMarineIceSheetBC(md);
         
         % ADD HERE if other forcings are to be time-dependent
         % calving
