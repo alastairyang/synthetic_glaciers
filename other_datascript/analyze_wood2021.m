@@ -21,10 +21,10 @@ depth_qtl = quantile(values.MeanDepth, [0.025, 0.25 0.50 0.75 0.975])
 
 figure;
 subplot(1,2,1)
-histogram(log(values.MeanDepth))
+histogram(values.MeanDepth)
 title('Mean Grounding line depth distribution')
 xlabel('m')
 subplot(1,2,2)
-histogram(log(values.MeanFjordWidth))
+histogram(values.MeanFjordWidth(values.MeanFjordWidth<20))
 title('Mean Fjord width distribution')
 xlabel('km')

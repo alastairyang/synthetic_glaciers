@@ -54,8 +54,8 @@ function [] = meshgrid2outline(X, Y)
     left_x = X(1, 1)*ones(numel(left_y), 1);
     % we want the bottom X interval to be smaller/finer than other sides,
     % because this is the front of the glacier.
-    left_x = interp1(1:length(left_x), left_x, 1:0.2:length(left_x)); % four times finer
-    left_y = interp1(1:length(left_y), left_y, 1:0.2:length(left_y));
+    left_x = interp1(1:length(left_x), left_x, 1:0.1:length(left_x)); % 10 times finer
+    left_y = interp1(1:length(left_y), left_y, 1:0.1:length(left_y));
     left_xy = [left_x', left_y'];
     
     % append all arrays

@@ -48,8 +48,8 @@ function output_model = run_models(model_index, model_type, forcing)
     if strcmp(model_type, 'ss') % transient
         [geometry, ~, ~, ~] = query_data(model_index, model_type);
         % input to model
-        md_ss = my_model_execute_ss(geometry{1}, model_index, model_type);
-        output_model.([model_name,'_ss']) = md_ss;
+        my_model_execute_ss(geometry{1}, model_index, model_type);
+        % output_model.([model_name,'_ss']) = md_ss;
     end
     
 end

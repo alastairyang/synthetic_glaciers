@@ -22,30 +22,23 @@ global to_disk
     if strcmp(model_type, 'spinup')
 
         md = model;
-        % parse out params
-        % calling parameters(1) is to input something other than a table
-        % so nothing is changed (changes should be made in the master file)
-        % and hence this function is just to output
-
-        % we use triangle method to create mesh
-        % Thi is modeled after JI example
-        % triangle(model, domain_file, average_element_size_meter)
+        
         syn = testbed_data(geometry_path);
         [Xq,Yq,~] = meshgrid_downsample(syn.X, syn.Y, ones(size(syn.X)), model_type); % use ones as placeholder
 
         % generate Domain.exp file
         meshgrid2outline(Xq,Yq);
         % get a preliminary mesh which we will refine later
-        md = bamg(md,'domain', 'Domain.exp', 'hmax', 1000);
-
+        md = bamg(md,'domain', 'Domain.exp', 'hmax', syn.attrs_table.fjord_width*0.3, 'hmin',200, 'gradation',2);
+        
         % Velocity field
         % load(velocity_path); % loaded as 'V'
-%         meshadapt_field = repmat(300*exp(-1/10000.*syn.x), size(syn.s,1), 1);
+%         meshadapt_field = repmat(20*exp(-1/10000.*syn.x), size(syn.s,1), 1);
 %         
 %         vel_mesh = InterpFromGridToMesh(syn.x',syn.y, meshadapt_field,...
 %                                          md.mesh.x,md.mesh.y, mean(meshadapt_field,'all'));
 %         %vel_mesh_norm = normalize(vel_mesh) + min(normalize(vel_mesh), [], 'all');
-%         md = bamg(md,'hmin',200,'hmax',hmax,'field',vel_mesh);
+%         md = bamg(md,'hmin',500,'hmax',20000,'field',vel_mesh,'anisomax',1,'NoBoundaryRefinement',0,'gradation',1.05);
         %md=triangle(md, 'Domain.exp');
         plotmodel(md, 'data','mesh')
 
@@ -426,17 +419,20 @@ global to_disk
     %md.timestepping.time_step = min(CFL_condition(syn.vel_init_x, hmin, hmin), 0.1);
     %disp(['Time step is ', num2str(md.timestepping.time_step)])
     if strcmp(model_type, 'spinup')       
-        md.timestepping.final_time =  50;
-    else % it is an actual transient run
+        md.timestepping.final_time =  10;
+    else % it is a transient run with perturbed forcings
         md.timestepping.final_time = sim_year_t;
     end
+    md.timestepping.time_step_min = 0.005;
     
     % Request output
     md.transient.requested_outputs={'default','IceVolume','IceVolumeAboveFloatation'};
 
     md.cluster=generic('name',oshostname(),'np',n_process);
-    md.miscellaneous.name = 'transient';
-	md=solve(md,'Transient');
+    md.miscellaneous.name = model_type;
+    
+    %md = solve(md,'Stressbalance');
+	md = solve(md,'Transient');
 
 % output
     output = md;
